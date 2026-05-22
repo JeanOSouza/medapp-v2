@@ -14,40 +14,29 @@ const authRoutes = require("./routes/authRoutes");
 const historicoRoutes = require("./routes/historicoRoutes");
 
 app.use(cors());
-
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// ROTA TESTE
+// TESTE
 app.get("/", (req, res) => {
-  res.json({
-    status: "online",
-    mensagem: "API MedApp funcionando",
-  });
+  res.json({ status: "online" });
 });
 
-// ROTAS API
-app.use("/api", userRoutes);
-app.use("/api", medicacaoRoutes);
-app.use("/api", authRoutes);
-app.use("/api", historicoRoutes);
+// ROTAS (SEM /api)
+app.use(userRoutes);
+app.use(medicacaoRoutes);
+app.use(authRoutes);
+app.use(historicoRoutes);
 
 const PORT = process.env.PORT || 3000;
 
 sequelize
   .authenticate()
+  .then(() => sequelize.sync())
   .then(() => {
     console.log("Conectado com PostgreSQL");
 
-    return sequelize.sync({ alter: true });
-  })
-  .then(() => {
-    console.log("Tabelas sincronizadas");
-
     app.listen(PORT, () => {
-      console.log(`Servidor rodando na porta ${PORT}`);
+      console.log("Servidor rodando na porta", PORT);
     });
   })
-  .catch((error) => {
-    console.log(error);
-  });
+  .catch((err) => console.log(err));
