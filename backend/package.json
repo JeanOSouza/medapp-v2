@@ -1,0 +1,27 @@
+{
+  "name": "back-medapp",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "pacotes": "express sqlite3 nodemon cors sequelize jsonwebtoken bcryptjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "nodemon": "^3.1.14",
+    "pacotes": "^1.0.0",
+    "sequelize": "^6.37.8",
+    "sqlite3": "^5.1.7"
+  },
+  "description": "",
+  "devDependencies": {},
+  "type": "commonjs"
+}

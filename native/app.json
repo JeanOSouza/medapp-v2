@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "MedApp",
+    "slug": "medapp",
+    "version": "1.0.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./src/assets/icon.png",
+    "assetBundlePatterns": ["**/*", "src/assets/**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.anonymous.medapp",
+      "buildNumber": "2"
+    },
+    "android": {
+      "package": "com.anonymous.medapp",
+      "versionCode": 2
+    },
+    "extra": {
+      "eas": {
+        "projectId": "c9acec30-f7c5-4131-819b-2f405a5fa83c"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c9acec30-f7c5-4131-819b-2f405a5fa83c"
+    },
+    "owner": "itsjeansouz"
+  }
+}

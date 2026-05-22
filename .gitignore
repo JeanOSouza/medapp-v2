@@ -1,0 +1,23 @@
+# Dependências (Nunca subir, cada um instala as suas com npm install)
+node_modules/
+
+# Pastas nativas do Android e iOS (Geradas pelo Expo Prebuild)
+android/
+ios/
+
+# Configurações do Expo e Logs
+.expo/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Arquivos de sistema e editores
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+
+# Variáveis de ambiente (Segurança: senhas e chaves de API)
+.env
