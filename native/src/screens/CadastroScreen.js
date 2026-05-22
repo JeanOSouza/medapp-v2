@@ -29,6 +29,8 @@ const generoOpts = [
 
 export default function CadastroScreen({ navigation }) {
   const [nome, setNome] = useState("");
+  const [cidade, setCidade] = useState("");
+  const [estado, setEstado] = useState("");
   const [data, setData] = useState(""); // Formato DD/MM/AAAA
   const [raca, setRaca] = useState("");
   const [genero, setGenero] = useState("");
@@ -74,6 +76,8 @@ export default function CadastroScreen({ navigation }) {
         data: dataParaBanco, // Aqui já vai no padrão do SQLite/MySQL
         raca,
         genero,
+        cidade,
+        estado,
       },
     });
   };
@@ -97,6 +101,20 @@ export default function CadastroScreen({ navigation }) {
           value={nome}
           onChangeText={setNome}
           placeholder="Ex: João Silva"
+        />
+
+        <Input
+          label="Digite o nome da cidade em que reside"
+          value={cidade}
+          onChangeText={setCidade}
+          placeholder="Ex: Viçosa"
+        />
+
+        <Input
+          label="Digite o estado de residencia"
+          value={estado}
+          onChangeText={setEstado}
+          placeholder="Ex: Minas Gerais"
         />
 
         <Input

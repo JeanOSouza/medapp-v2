@@ -7,8 +7,18 @@ module.exports = {
   async registrar(req, res) {
     try {
       console.log("--> DADOS CHEGANDO NO BACKEND:", req.body); // ADICIONE ESTA LINHA
-      const { nome, email, senha, data, raca, genero, telefone, comorbidades } =
-        req.body;
+      const {
+        nome,
+        email,
+        senha,
+        data,
+        raca,
+        genero,
+        telefone,
+        comorbidades,
+        cidade,
+        estado,
+      } = req.body;
 
       if (!nome || !email || !senha) {
         return res
@@ -38,6 +48,8 @@ module.exports = {
         genero,
         telefone,
         comorbidades,
+        cidade,
+        estado,
       });
 
       console.log(">>> NOVO USUÁRIO CADASTRADO:", emailLimpo);
