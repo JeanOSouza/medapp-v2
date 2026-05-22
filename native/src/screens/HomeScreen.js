@@ -7,6 +7,7 @@ import {
   TextInput,
   Alert,
 } from "react-native";
+import { Button } from "../components/Button";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, radius } from "../theme";
 import Header from "../components/Header";
@@ -127,6 +128,9 @@ export default function HomeScreen({ navigation }) {
   const [meds, setMeds] = useState([]);
   const [hist, setHist] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [showHoraInput, setShowHoraInput] = useState(false);
+  const [medSelecionado, setMedSelecionado] = useState(null);
+  const [horaTomada, setHoraTomada] = useState("");
 
   // --- SOLICITAR PERMISSÃO DE ALARMES ---
   async function solicitarPermissoes() {
@@ -288,19 +292,34 @@ export default function HomeScreen({ navigation }) {
     onRefresh();
   }, []);
 
-  // --- AÇÕES ---
-  async function marcarComoTomado(id) {
+  async function confirmarTomada() {
     try {
-      await api.post(`/historico/${id}`);
+      await api.post(`/historico/${medSelecionado}`, {
+        hora_tomada: new Date(horaTomada).toISOString(),
+      });
+
+      setShowHoraInput(false);
+      setHoraTomada("");
+      setMedSelecionado(null);
 
       await Promise.all([loadHistorico(), loadMedicacoes()]);
-
-      Alert.alert("Sucesso", "Dose registrada!");
-    } catch (error) {
-      console.log(error);
-
-      Alert.alert("Erro", "Não foi possível registrar.");
+    } catch (err) {
+      console.log(err);
     }
+  }
+
+  // --- AÇÕES ---
+  async function marcarComoTomado(id) {
+    const med = meds.find((m) => m.id_medicacao === id);
+
+    if (med?.status === "atrasado") {
+      setMedSelecionado(id);
+      setShowHoraInput(true);
+      return;
+    }
+
+    await api.post(`/historico/${id}`);
+    await Promise.all([loadHistorico(), loadMedicacoes()]);
   }
 
   async function deletarMedicacao(id) {
@@ -323,6 +342,38 @@ export default function HomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <Header />
+
+      {showHoraInput && (
+        <View
+          style={{
+            padding: 15,
+            backgroundColor: "#fff",
+            marginBottom: 10,
+            borderRadius: 10,
+            elevation: 3,
+          }}
+        >
+          <Text style={{ fontWeight: "bold", marginBottom: 10 }}>
+            Informe a hora que tomou o remédio:
+          </Text>
+
+          <TextInput
+            placeholder="Ex: 2026-05-22T14:30"
+            value={horaTomada}
+            onChangeText={setHoraTomada}
+            style={{
+              borderWidth: 1,
+              padding: 10,
+              borderRadius: 8,
+            }}
+          />
+
+          <View style={{ flexDirection: "row", marginTop: 10, gap: 10 }}>
+            <Button title="Cancelar" onPress={() => setShowHoraInput(false)} />
+            <Button title="Confirmar" onPress={confirmarTomada} />
+          </View>
+        </View>
+      )}
 
       <View style={styles.searchBox}>
         <Ionicons name="search" size={16} color={colors.textMuted} />

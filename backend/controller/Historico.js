@@ -32,19 +32,21 @@ module.exports = {
         order: [["data_tomada", "DESC"]],
       });
 
-      res.json(doses);
+      return res.json(doses);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   },
 
+  // ✅ AQUI FOI O AJUSTE PRINCIPAL
   async registroDose(req, res) {
     try {
       const { id_medicacao } = req.params;
+      const { data_tomada } = req.body; // 👈 agora aceita hora do app
 
       const dose = await Historico.create({
         id_medicacao: Number(id_medicacao),
-        data_tomada: new Date(),
+        data_tomada: data_tomada ? new Date(data_tomada) : new Date(),
       });
 
       return res.status(201).json(dose);
