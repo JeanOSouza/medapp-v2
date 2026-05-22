@@ -21,7 +21,8 @@ app.use(express.urlencoded({ extended: true }));
 // ROTA TESTE
 app.get("/", (req, res) => {
   res.json({
-    mensagem: "API MedApp funcionando!",
+    status: "online",
+    mensagem: "API MedApp funcionando",
   });
 });
 
