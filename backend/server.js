@@ -8,9 +8,9 @@ const sequelize = require("./config/database");
 require("./models/associacoes");
 
 // ROTAS
+const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const medicacaoRoutes = require("./routes/medicacaoRoutes");
-const authRoutes = require("./routes/authRoutes");
 const historicoRoutes = require("./routes/historicoRoutes");
 
 app.use(cors());
@@ -22,9 +22,9 @@ app.get("/", (req, res) => {
 });
 
 // ROTAS (SEM /api)
+app.use(authRoutes);
 app.use(userRoutes);
 app.use(medicacaoRoutes);
-app.use(authRoutes);
 app.use(historicoRoutes);
 
 const PORT = process.env.PORT || 3000;
