@@ -6,8 +6,18 @@ const bcrypt = require("bcryptjs");
 module.exports = {
   async create(req, res) {
     try {
-      const { nome, email, senha, data, raca, genero, telefone, comorbidades } =
-        req.body;
+      const {
+        nome,
+        email,
+        senha,
+        data,
+        raca,
+        genero,
+        telefone,
+        comorbidades,
+        cidade,
+        estado,
+      } = req.body;
 
       if (!nome || !email || !senha) {
         return res.status(400).json({
@@ -35,6 +45,8 @@ module.exports = {
         genero,
         telefone,
         comorbidades,
+        cidade,
+        estado,
       });
 
       res.status(201).json(user);

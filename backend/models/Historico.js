@@ -1,7 +1,7 @@
-const conn = require("../database/conn");
+const sequelize = require("../config/database");
 const { DataTypes } = require("sequelize");
 
-const HistoricoMed = conn.define("historico_med", {
+const HistoricoMed = sequelize.define("historico_med", {
   id_historico: {
     type: DataTypes.INTEGER,
     autoIncrement: true,

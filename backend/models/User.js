@@ -1,7 +1,7 @@
-const conn = require("../database/conn");
 const { DataTypes } = require("sequelize");
+const sequelize = require("../config/database");
 
-const User = conn.define("User", {
+const User = sequelize.define("User", {
   id_usuario: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -38,6 +38,14 @@ const User = conn.define("User", {
   },
   comorbidades: {
     type: DataTypes.TEXT,
+  },
+  cidade: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  estado: {
+    type: DataTypes.STRING,
+    allowNull: false,
   },
 });
 
