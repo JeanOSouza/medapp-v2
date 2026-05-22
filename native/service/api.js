@@ -2,8 +2,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const api = axios.create({
-  // baseURL: "http://192.168.2.56:3000/api",
-  baseURL: "https://medapp-4nkb.onrender.com/api",
+  baseURL: "https://medapp-v2.onrender.com/",
   timeout: 20000,
 });
 

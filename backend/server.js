@@ -1,28 +1,52 @@
-const sequelize = require("./config/database");
 const express = require("express");
+const cors = require("cors");
 
 const app = express();
-app.use(express.json());
 
-require("./models/User");
-require("./models/Medicacao");
-require("./models/Historico");
+const sequelize = require("./config/database");
+
 require("./models/associacoes");
 
-sequelize.sync({ alter: true }).then(() => {
-  console.log("Conectado com Servidor");
+// ROTAS
+const userRoutes = require("./routes/userRoutes");
+const medicacaoRoutes = require("./routes/medicacaoRoutes");
+const authRoutes = require("./routes/authRoutes");
+const historicoRoutes = require("./routes/historicoRoutes");
+
+app.use(cors());
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// ROTA TESTE
+app.get("/", (req, res) => {
+  res.json({
+    mensagem: "API MedApp funcionando!",
+  });
 });
+
+// ROTAS API
+app.use("/api", userRoutes);
+app.use("/api", medicacaoRoutes);
+app.use("/api", authRoutes);
+app.use("/api", historicoRoutes);
+
+const PORT = process.env.PORT || 3000;
 
 sequelize
   .authenticate()
   .then(() => {
-    console.log("Conectado");
-  })
-  .catch((err) => {
-    console.error("Erro", err);
-  });
+    console.log("Conectado com PostgreSQL");
 
-const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta: ${PORT} `);
-});
+    return sequelize.sync({ alter: true });
+  })
+  .then(() => {
+    console.log("Tabelas sincronizadas");
+
+    app.listen(PORT, () => {
+      console.log(`Servidor rodando na porta ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.log(error);
+  });
