@@ -107,8 +107,9 @@ module.exports = {
       );
 
       res.json({
+        token,
         user: {
-          id: user.id,
+          id: user.id_usuario,
           nome: user.nome,
           email: user.email,
           telefone: user.telefone,
