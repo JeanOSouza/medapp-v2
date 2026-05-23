@@ -106,12 +106,16 @@ module.exports = {
         { expiresIn: "24h" },
       );
 
-      return res.json({
-        token,
+      res.json({
         user: {
-          id: user.id_usuario,
+          id: user.id,
           nome: user.nome,
           email: user.email,
+          telefone: user.telefone,
+          genero: user.genero,
+          raca: user.raca,
+          comorbidades: user.comorbidades,
+          data_nascimento: user.data_nascimento,
         },
       });
     } catch (error) {

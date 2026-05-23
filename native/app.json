@@ -7,14 +7,30 @@
     "userInterfaceStyle": "light",
     "icon": "./src/assets/icon.png",
     "assetBundlePatterns": ["**/*", "src/assets/**/*"],
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "sounds": ["./assets/sounds/notification_sound.wav"]
+        }
+      ]
+    ],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.anonymous.medapp",
-      "buildNumber": "2"
+      "buildNumber": "2",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.anonymous.medapp",
-      "versionCode": 2
+      "versionCode": 2,
+      "permissions": [
+        "USE_EXACT_ALARM",
+        "SCHEDULE_EXACT_ALARM",
+        "RECEIVE_BOOT_COMPLETED"
+      ]
     },
     "extra": {
       "eas": {
