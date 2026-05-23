@@ -27,6 +27,7 @@ module.exports = {
             model: Medicacao,
             where: { id_usuario: userId },
             required: true,
+            attributes: ["nome_medicacao", "dosagem"],
           },
         ],
         order: [["data_tomada", "DESC"]],

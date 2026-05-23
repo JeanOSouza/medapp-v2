@@ -11,6 +11,8 @@ module.exports = {
         inicio_medicacao,
         frequencia,
         ultimadose,
+        status,
+        fim_medicacao,
       } = req.body;
 
       const id_usuario = req.userId;
@@ -27,6 +29,8 @@ module.exports = {
         inicio_medicacao,
         frequencia,
         ultimadose,
+        status,
+        fim_medicacao,
       });
 
       console.log(">>> Medicamento cadastrado:", nome_medicacao);
@@ -59,7 +63,7 @@ module.exports = {
     try {
       const userId = req.userId;
       const medicacoes = await Medicacao.findAll({
-        where: { id_usuario: userId },
+        where: { id_usuario: userId, status: "ativo" },
       });
       res.json(medicacoes);
     } catch (error) {
@@ -93,7 +97,6 @@ module.exports = {
       });
 
       if (deletado) {
-        id_medicacao = id_medicacao - 1;
         res.json({ message: "Medicamento apagado com sucesso" });
       } else {
         res.status(404).json({ message: "Medicamento não encontrado" });
@@ -108,7 +111,7 @@ module.exports = {
       console.log(">>> Buscando medicamentos para o usuário:", userId);
 
       const medicacoes = await Medicacao.findAll({
-        where: { id_usuario: userId },
+        where: { id_usuario: userId, status: "ativo" },
       });
 
       return res.json(medicacoes);
@@ -119,6 +122,55 @@ module.exports = {
         error: "Erro no banco de dados",
         message: error.message,
         sqlError: error.name,
+      });
+    }
+  },
+
+  async listInativos(req, res) {
+    try {
+      const userId = req.userId;
+
+      const medicacoes = await Medicacao.findAll({
+        where: {
+          id_usuario: userId,
+          status: "inativo",
+        },
+      });
+
+      return res.json(medicacoes);
+    } catch (error) {
+      return res.status(500).json({
+        error: error.message,
+      });
+    }
+  },
+
+  async finalizarMedicacao(req, res) {
+    try {
+      const { id } = req.params;
+      console.log("ID RECEBIDO:", id);
+      console.log("USER:", req.userId);
+
+      await Medicacao.update(
+        {
+          status: "inativo",
+        },
+        {
+          where: {
+            id_medicacao: id,
+            id_usuario: req.userId,
+          },
+        },
+      );
+
+      return res.json({
+        message: "Medicamento finalizado",
+      });
+    } catch (error) {
+      console.log(error);
+
+      return res.status(500).json({
+        error: "Erro ao finalizar medicamento",
       });
     }
   },

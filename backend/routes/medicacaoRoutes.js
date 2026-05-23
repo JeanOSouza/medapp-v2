@@ -7,6 +7,8 @@ const medicacaoController = require("../controller/Medicacao");
 router.post("/medicamentos", auth, medicacaoController.create);
 router.get("/medicamentos", auth, medicacaoController.listByUser);
 
+router.get("/medicamentos/inativos", auth, medicacaoController.listInativos);
+
 router.post(
   "/medicamentosHist/:id_medicacao",
   auth,
@@ -17,6 +19,12 @@ router.post(
   medicacaoController.registroDose,
 );
 router.put("/medicamentosAtualizar/:id", auth, medicacaoController.update);
+router.put(
+  "/medicamentos/:id/finalizar",
+  auth,
+  medicacaoController.finalizarMedicacao,
+);
+
 router.delete("/medicamentosApagar/:id", auth, medicacaoController.delete);
 
 module.exports = router;

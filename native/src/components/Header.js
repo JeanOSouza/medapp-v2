@@ -10,29 +10,22 @@ export default function Header() {
       <View></View>
 
       <Logo size="md" />
-      <View style={styles.right}>
-        <TouchableOpacity></TouchableOpacity>
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
     backgroundColor: colors.background,
-    paddingTop: 25,
+    paddingTop: 20,
   },
-  right: { flexDirection: "row", alignItems: "center", gap: 8 },
-  avatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.secondary,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  // avatar: {
+  //   width: 30,
+  //   height: 30,
+  //   borderRadius: 15,
+  //   backgroundColor: colors.secondary,
+  //   justifyContent: "center",
+  //   alignItems: "center",
+  // },
 });

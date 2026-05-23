@@ -26,13 +26,20 @@ const Medicacao = sequelize.define("medicacao", {
   inicio_medicacao: {
     type: DataTypes.DATE,
   },
+  fim_medicacao: {
+    type: DataTypes.DATE,
+  },
   frequencia: {
     type: DataTypes.INTEGER,
-    allownull: false,
+    allowNull: false,
   },
   ultimadose: {
     type: DataTypes.STRING,
     allowNull: true,
+  },
+  status: {
+    type: DataTypes.STRING,
+    defaultValue: "ativo",
   },
 });
 

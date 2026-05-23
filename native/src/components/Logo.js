@@ -4,7 +4,7 @@ import { Image, StyleSheet } from "react-native";
 export default function Logo({ size = "lg" }) {
   const sizes = {
     sm: 120,
-    md: 220,
+    md: 200,
     lg: 750,
   };
 
@@ -14,8 +14,8 @@ export default function Logo({ size = "lg" }) {
       style={[
         styles.logo,
         {
-          width: 250,
-          height: 90,
+          width: 210,
+          height: 100,
         },
       ]}
     />

@@ -17,9 +17,6 @@ import ScreenWrapper from "../components/ScreenWrapper";
 import api from "../../service/api";
 import * as Notifications from "expo-notifications";
 
-// ─────────────────────────────────────────────
-// CONFIGURAÇÃO DE NOTIFICAÇÕES
-// ─────────────────────────────────────────────
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -30,9 +27,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// ─────────────────────────────────────────────
-// MODAL — HORA DO REMÉDIO ATRASADO
-// ─────────────────────────────────────────────
 function ModalHoraAtrasada({ visible, onConfirm, onCancel }) {
   const [texto, setTexto] = useState("");
   const [erro, setErro] = useState("");
@@ -137,9 +131,6 @@ function ModalHoraAtrasada({ visible, onConfirm, onCancel }) {
   );
 }
 
-// ─────────────────────────────────────────────
-// CARD — MEDICAMENTO ATIVO
-// ─────────────────────────────────────────────
 function MedCard({ med, onDelete, onCheck, proximaDose, navigation }) {
   return (
     <TouchableOpacity
@@ -150,10 +141,6 @@ function MedCard({ med, onDelete, onCheck, proximaDose, navigation }) {
     >
       <View style={[styles.card, med.status === "atrasado" && styles.cardHL]}>
         <View style={styles.cardRow}>
-          <View style={styles.img}>
-            <Ionicons name="medical" size={22} color={colors.primary} />
-          </View>
-
           <View style={styles.info}>
             <Text style={styles.medName}>{med.nome_medicacao}</Text>
             <Text style={styles.medDesc}>
@@ -190,9 +177,7 @@ function MedCard({ med, onDelete, onCheck, proximaDose, navigation }) {
   );
 }
 
-// ─────────────────────────────────────────────
 // CARD — HISTÓRICO (TOMADOS)
-// ─────────────────────────────────────────────
 function Tomados({ hist, med }) {
   let dataObjeto = new Date();
 
@@ -222,9 +207,6 @@ function Tomados({ hist, med }) {
   );
 }
 
-// ─────────────────────────────────────────────
-// SCREEN PRINCIPAL
-// ─────────────────────────────────────────────
 export default function HomeScreen({ navigation }) {
   const [tab, setTab] = useState("ativos");
   const [search, setSearch] = useState("");
@@ -234,7 +216,6 @@ export default function HomeScreen({ navigation }) {
   const [modalVisivel, setModalVisivel] = useState(false);
   const [idSendoMarcado, setIdSendoMarcado] = useState(null);
 
-  // ── Permissões ──────────────────────────────
   async function solicitarPermissoes() {
     const { status } = await Notifications.requestPermissionsAsync();
     if (status !== "granted") {
@@ -246,7 +227,6 @@ export default function HomeScreen({ navigation }) {
   }
 
   // ── Notificações ────────────────────────────
-  // recebe o histórico como parâmetro para não depender do state
   async function agendarLembretes(listaMedicamentos, historicoAtual = []) {
     try {
       await Notifications.cancelAllScheduledNotificationsAsync();
@@ -308,7 +288,6 @@ export default function HomeScreen({ navigation }) {
   }
 
   // ── Próxima dose ────────────────────────────
-  // recebe o histórico como parâmetro para não depender do state
   const getProximaDose = (medicamento, historicoAtual = hist) => {
     if (!medicamento?.frequencia) return "---";
 
@@ -338,7 +317,8 @@ export default function HomeScreen({ navigation }) {
     );
     const agora = new Date();
 
-    medicamento.status = proximaDoseData < agora ? "atrasado" : "ok";
+    medicamento.status =
+      proximaDoseData < agora ? "Atrasado" || "Inativo" : "Ativo";
 
     const eHoje =
       proximaDoseData.toLocaleDateString() === agora.toLocaleDateString();
@@ -356,7 +336,7 @@ export default function HomeScreen({ navigation }) {
     try {
       const response = await api.get("historico/todos");
       setHist(response.data);
-      return response.data; // retorna para uso imediato sem depender do state
+      return response.data;
     } catch (error) {
       console.log("Erro hist:", error);
       return [];
@@ -495,18 +475,22 @@ export default function HomeScreen({ navigation }) {
                 navigation={navigation}
               />
             ))
-          : hist.map((item) => {
-              const dadosMed = meds.find(
-                (m) => String(m.id_medicacao) === String(item.id_medicacao),
-              );
-              return (
-                <Tomados
-                  key={item.id_historico}
-                  hist={item}
-                  med={dadosMed || { nome_medicacao: "Removido" }}
-                />
-              );
-            })}
+          : hist
+              // 1. Filtra para manter apenas o histórico de remédios que ainda existem
+              .filter((item) =>
+                meds.some(
+                  (m) => String(m.id_medicacao) === String(item.id_medicacao),
+                ),
+              )
+              // 2. Renderiza apenas os válidos
+              .map((item) => {
+                const dadosMed = meds.find(
+                  (m) => String(m.id_medicacao) === String(item.id_medicacao),
+                );
+                return (
+                  <Tomados key={item.id_historico} hist={item} med={dadosMed} />
+                );
+              })}
       </ScreenWrapper>
     </View>
   );
@@ -660,14 +644,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  info: { flex: 1 },
+  info: { flex: 1, paddingLeft: 10 },
   medName: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
     color: colors.primary,
     fontStyle: "italic",
   },
-  medDesc: { fontSize: 16, color: colors.text, marginTop: 2 },
+  medDesc: { fontSize: 18, color: colors.text, marginTop: 2 },
   proximaDoseText: { fontWeight: "500", color: "#255803", textAlign: "left" },
   badge: {
     backgroundColor: colors.error,
@@ -677,7 +661,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginTop: 5,
   },
-  badgeText: { color: "#fff", fontSize: 11, fontWeight: "600" },
+  badgeText: { color: "#fff", fontSize: 13, fontWeight: "600" },
   actions: {
     flexDirection: "row",
     gap: spacing.lg,

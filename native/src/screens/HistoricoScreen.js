@@ -7,7 +7,9 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
+  ScrollView,
 } from "react-native";
+
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, radius } from "../theme";
 import Header from "../components/Header";
@@ -22,12 +24,15 @@ function CartaoHistorico({ medCad, onPress }) {
         <View style={styles.cardRow}>
           <View style={styles.info}>
             <Text style={styles.medName}>Nome: {medCad.nome_medicacao}</Text>
+
             <Text style={styles.medDesc}>Dosagem: {medCad.dosagem}</Text>
+
             <Text style={styles.medFreq}>
-              Tomar a cada {""} {medCad.frequencia}{" "}
+              Tomar a cada {medCad.frequencia}{" "}
               {medCad.frequencia >= 2 ? "horas" : "hora"}
             </Text>
           </View>
+
           <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </View>
       </TouchableOpacity>
@@ -37,47 +42,80 @@ function CartaoHistorico({ medCad, onPress }) {
 
 export default function HistoricoScreen() {
   const [search, setSearch] = useState("");
-  const [medCad, setMedCad] = useState([]);
+  const [medAtivos, setMedAtivos] = useState([]);
+  const [medInativos, setMedInativos] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const navigation = useNavigation();
 
-  // Função para carregar registros
+  // --- CARREGAR MEDICAMENTOS ATIVOS ---
   const loadRegistro = async () => {
     try {
-      const response = await api.get("medicamentos");
-      setMedCad(response.data);
+      const response = await api.get("/medicamentos");
+
+      setMedAtivos(response.data);
     } catch (error) {
-      console.log("Erro ao carregar registros:", error);
+      console.log("Erro ao carregar ativos:", error);
     }
   };
 
-  // Função de Refresh
+  // --- CARREGAR MEDICAMENTOS INATIVOS ---
+  const loadInativos = async () => {
+    try {
+      const response = await api.get("/medicamentos/inativos");
+
+      setMedInativos(response.data);
+    } catch (error) {
+      console.log("Erro ao carregar inativos:", error);
+    }
+  };
+
+  // --- REFRESH ---
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+
     await loadRegistro();
+    await loadInativos();
+
     setRefreshing(false);
   }, []);
 
+  // --- INICIALIZAÇÃO ---
   useEffect(() => {
     loadRegistro();
+    loadInativos();
   }, []);
 
-  // Filtro de busca
-  const filteredData = medCad.filter((item) =>
+  // --- FILTROS ---
+  const filteredAtivos = medAtivos.filter((item) =>
+    item.nome_medicacao?.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const filteredInativos = medInativos.filter((item) =>
     item.nome_medicacao?.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[colors.secondary]}
+          tintColor={colors.secondary}
+        />
+      }
+    >
       <Header />
 
-      <Text style={styles.title}>Ultimos Tomados</Text>
+      <Text style={styles.title}>Histórico de Medicações</Text>
 
-      {/* Caixa de Busca */}
+      {/* BUSCA */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBox}>
           <Ionicons name="search" size={18} color={colors.textMuted} />
+
           <TextInput
             style={styles.searchInput}
             placeholder="Pesquisar medicamento..."
@@ -88,23 +126,19 @@ export default function HistoricoScreen() {
         </View>
       </View>
 
-      {/* Lista Principal */}
+      {/* ATIVOS */}
+      <Text style={styles.sectionTitle}>Medicações Ativas</Text>
+
       <FlatList
-        data={filteredData}
+        data={filteredAtivos}
         keyExtractor={(item) => String(item.id_medicacao)}
+        scrollEnabled={false}
         contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[colors.secondary]} // Android
-            tintColor={colors.secondary} // iOS
-            progressViewOffset={20}
-          />
-        }
         ListEmptyComponent={() => (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Nenhum medicamento encontrado.</Text>
+            <Text style={styles.emptyText}>
+              Nenhum medicamento ativo encontrado.
+            </Text>
           </View>
         )}
         renderItem={({ item }) => (
@@ -118,7 +152,34 @@ export default function HistoricoScreen() {
           />
         )}
       />
-    </View>
+
+      {/* INATIVOS */}
+      <Text style={styles.sectionTitle}>Medicações Inativas</Text>
+
+      <FlatList
+        data={filteredInativos}
+        keyExtractor={(item) => String(item.id_medicacao)}
+        scrollEnabled={false}
+        contentContainerStyle={styles.listContent}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              Nenhum medicamento inativo encontrado.
+            </Text>
+          </View>
+        )}
+        renderItem={({ item }) => (
+          <CartaoHistorico
+            medCad={item}
+            onPress={() =>
+              navigation.navigate("DescricaoRemedio", {
+                medicamento: item,
+              })
+            }
+          />
+        )}
+      />
+    </ScrollView>
   );
 }
 
@@ -127,17 +188,30 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+
   title: {
     textAlign: "center",
+    fontSize: 22,
+    fontWeight: "700",
+    color: colors.primary,
+    marginTop: 10,
+    marginBottom: 15,
+  },
+
+  sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: colors.primary,
-    marginBottom: 8,
+    marginHorizontal: spacing.md,
+    marginBottom: 10,
+    marginTop: 10,
   },
+
   searchContainer: {
     paddingHorizontal: spacing.md,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
+
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -146,63 +220,76 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     height: 48,
     gap: spacing.sm,
+
     elevation: 3,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+
   searchInput: {
     flex: 1,
     fontSize: 16,
     color: colors.text,
   },
+
   listContent: {
     paddingHorizontal: spacing.md,
-    paddingBottom: 40,
-    flexGrow: 1, // Crucial para o RefreshControl funcionar
+    paddingBottom: 10,
   },
+
   card: {
     backgroundColor: colors.cardBlue,
     borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.md,
+
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.05)",
   },
+
   cardRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
+
   info: {
     flex: 1,
   },
+
   medName: {
     fontSize: 18,
     fontWeight: "700",
     color: colors.primary,
     marginBottom: 4,
   },
+
   medDesc: {
     fontSize: 14,
     color: colors.text,
     fontWeight: "600",
   },
+
   medFreq: {
     fontSize: 14,
     color: colors.secondary,
     marginTop: 4,
     fontWeight: "500",
   },
+
   emptyContainer: {
-    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 100,
+    marginVertical: 20,
   },
+
   emptyText: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.textMuted,
   },
 });
