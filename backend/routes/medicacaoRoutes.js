@@ -24,7 +24,11 @@ router.put(
   auth,
   medicacaoController.finalizarMedicacao,
 );
-
+router.put(
+  "/medicamentos/:id/reativar",
+  auth,
+  medicacaoController.reativarMedicacao,
+);
 router.delete("/medicamentosApagar/:id", auth, medicacaoController.delete);
 
 module.exports = router;

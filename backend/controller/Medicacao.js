@@ -178,4 +178,33 @@ module.exports = {
       });
     }
   },
+  async reativarMedicacao(req, res) {
+    try {
+      const { id } = req.params;
+
+      const atualizado = await Medicacao.update(
+        {
+          status: "ativo",
+        },
+        {
+          where: {
+            id_medicacao: id,
+            id_usuario: req.userId,
+          },
+        },
+      );
+
+      console.log("RESULTADO UPDATE:", atualizado);
+
+      const medicacao = await Medicacao.findByPk(id);
+
+      return res.json(medicacao);
+    } catch (error) {
+      console.log(error);
+
+      return res.status(500).json({
+        error: error.message,
+      });
+    }
+  },
 };
