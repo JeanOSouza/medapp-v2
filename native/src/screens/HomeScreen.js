@@ -6,20 +6,15 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
-
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
-import * as Notifications from "expo-notifications";
-
 import { colors, spacing, radius } from "../theme";
 import Header from "../components/Header";
 import ScreenWrapper from "../components/ScreenWrapper";
 import api from "../../service/api";
+import * as Notifications from "expo-notifications";
 
+// --- CONFIGURAÇÃO DE NOTIFICAÇÕES ---
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -29,110 +24,6 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
-
-function ModalHoraAtrasada({ visible, onConfirm, onCancel }) {
-  const [texto, setTexto] = useState("");
-  const [erro, setErro] = useState("");
-
-  const handleHorarioChange = (text) => {
-    let val = text.replace(/\D/g, "");
-
-    if (val.length > 4) val = val.substring(0, 4);
-
-    if (val.length >= 2) {
-      const horas = parseInt(val.substring(0, 2), 10);
-      if (horas > 23) val = "23" + val.substring(2);
-    }
-
-    if (val.length === 4) {
-      const minutos = parseInt(val.substring(2, 4), 10);
-      if (minutos > 59) val = val.substring(0, 2) + "59";
-    }
-
-    if (val.length > 2) {
-      val = val.replace(/^(\d{2})(\d{0,2})/, "$1:$2");
-    }
-
-    if (erro) setErro("");
-    setTexto(val);
-  };
-
-  function handleConfirmar() {
-    const regex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-
-    if (!regex.test(texto)) {
-      setErro("Formato inválido. Use HH:mm");
-      return;
-    }
-
-    const [horas, minutos] = texto.split(":").map(Number);
-
-    const data = new Date();
-    data.setHours(horas, minutos, 0, 0);
-
-    if (data > new Date()) {
-      setErro("A hora não pode ser no futuro.");
-      return;
-    }
-
-    setErro("");
-    setTexto("");
-    onConfirm(data);
-  }
-
-  function handleCancelar() {
-    setErro("");
-    setTexto("");
-    onCancel();
-  }
-
-  return (
-    <Modal visible={visible} transparent animationType="fade">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={modalStyles.overlay}
-      >
-        <View style={modalStyles.box}>
-          <View style={modalStyles.header}>
-            <Ionicons name="time-outline" size={22} color={colors.secondary} />
-            <Text style={modalStyles.titulo}>Remédio atrasado</Text>
-          </View>
-
-          <Text style={modalStyles.descricao}>
-            Que horas você tomou este remédio?
-          </Text>
-
-          <TextInput
-            style={[modalStyles.input, erro ? modalStyles.inputErro : null]}
-            placeholder="HH:mm"
-            keyboardType="numeric"
-            value={texto}
-            onChangeText={handleHorarioChange}
-            autoFocus
-          />
-
-          {erro ? <Text style={modalStyles.erro}>{erro}</Text> : null}
-
-          <View style={modalStyles.botoes}>
-            <TouchableOpacity
-              style={modalStyles.btnCancelar}
-              onPress={handleCancelar}
-            >
-              <Text style={modalStyles.btnCancelarTexto}>Cancelar</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={modalStyles.btnConfirmar}
-              onPress={handleConfirmar}
-            >
-              <Text style={modalStyles.btnConfirmarTexto}>Confirmar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
-  );
-}
 
 function MedCard({ med, onDelete, onCheck, proximaDose, navigation }) {
   return (
@@ -144,15 +35,38 @@ function MedCard({ med, onDelete, onCheck, proximaDose, navigation }) {
         })
       }
     >
-      <View style={styles.card}>
-        <View style={styles.info}>
-          <Text style={styles.medName}>{med.nome_medicacao}</Text>
+      <View style={[styles.card, med.status === "atrasado" && styles.cardHL]}>
+        <View style={styles.cardRow}>
+          <View style={styles.img}>
+            <Ionicons name="medical" size={22} color={colors.primary} />
+          </View>
 
-          <Text style={styles.medDesc}>
-            {med.dosagem} - {med.descricao}
-          </Text>
+          <View style={styles.info}>
+            <Text style={styles.medName}>{med.nome_medicacao}</Text>
 
-          <Text style={styles.proximaDoseText}>Próxima: {proximaDose}</Text>
+            <Text style={styles.medDesc}>
+              {med.dosagem} - {med.descricao}
+            </Text>
+
+            <Text
+              style={[
+                styles.medDesc,
+                {
+                  fontWeight: "500",
+                  color: "#255803",
+                  textAlign: "left",
+                },
+              ]}
+            >
+              Próxima: {proximaDose}
+            </Text>
+
+            {med.status === "atrasado" && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>Atrasado</Text>
+              </View>
+            )}
+          </View>
         </View>
 
         <View style={styles.actions}>
@@ -160,14 +74,14 @@ function MedCard({ med, onDelete, onCheck, proximaDose, navigation }) {
             style={styles.btnGreen}
             onPress={() => onCheck(med.id_medicacao)}
           >
-            <Ionicons name="checkmark" size={18} color="#fff" />
+            <Ionicons name="checkmark" size={16} color="#fff" />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.btnRed}
             onPress={() => onDelete(med.id_medicacao)}
           >
-            <Ionicons name="close" size={18} color="#fff" />
+            <Ionicons name="close" size={16} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
@@ -175,12 +89,12 @@ function MedCard({ med, onDelete, onCheck, proximaDose, navigation }) {
   );
 }
 
+// --- COMPONENTE DO CARD DE HISTÓRICO (TOMADOS - BLINDADO) ---
 function Tomados({ hist, med }) {
   let dataObjeto = new Date();
 
-  if (hist?.data_tomada) {
+  if (hist && hist.data_tomada) {
     const parsed = new Date(hist.data_tomada);
-
     if (!isNaN(parsed.getTime())) {
       dataObjeto = parsed;
     }
@@ -190,7 +104,6 @@ function Tomados({ hist, med }) {
     hour: "2-digit",
     minute: "2-digit",
   });
-
   const dia = dataObjeto.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
@@ -200,7 +113,6 @@ function Tomados({ hist, med }) {
     <View style={styles.card}>
       <View style={styles.info}>
         <Text style={styles.medName}>{med?.nome_medicacao || "Remédio"}</Text>
-
         <Text style={styles.medDesc}>
           Tomado em: {dia} às {hora}
         </Text>
@@ -216,98 +128,158 @@ export default function HomeScreen({ navigation }) {
   const [hist, setHist] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  const [modalVisivel, setModalVisivel] = useState(false);
-  const [idSendoMarcado, setIdSendoMarcado] = useState(null);
-
-  useEffect(() => {
-    async function testeToken() {
-      const token = await AsyncStorage.getItem("token");
-
-      console.log("TOKEN SALVO:", token);
-    }
-
-    testeToken();
-
-    solicitarPermissoes();
-    onRefresh();
-  }, []);
-
+  // --- SOLICITAR PERMISSÃO DE ALARMES ---
   async function solicitarPermissoes() {
     const { status } = await Notifications.requestPermissionsAsync();
-
     if (status !== "granted") {
-      Alert.alert("Aviso", "Ative as notificações para receber lembretes.");
+      Alert.alert(
+        "Aviso",
+        "Ative as notificações para não esquecer seus remédios.",
+      );
     }
   }
 
+  // --- AGENDAMENTO DA PRÓXIMA DOSE APENAS SE JÀ TIVER SIDO TOMADO ---
   async function agendarLembretes(listaMedicamentos) {
     try {
       await Notifications.cancelAllScheduledNotificationsAsync();
 
+      if (!listaMedicamentos || listaMedicamentos.length === 0) return;
+
       for (const item of listaMedicamentos) {
-        const data = new Date(Date.now() + 10000);
+        const freqHoras = parseInt(item.frequencia) || 8;
+
+        const ultimaTomada = hist.find(
+          (h) => String(h.id_medicacao) === String(item.id_medicacao),
+        );
+
+        let dataReferencia;
+
+        if (ultimaTomada && ultimaTomada.data_tomada) {
+          const parsed = new Date(ultimaTomada.data_tomada);
+          if (!isNaN(parsed.getTime())) dataReferencia = parsed;
+        }
+
+        // SE NÃO TIVER HISTÓRICO: Combina a data pura com a hora enviada no cadastro
+        if (!dataReferencia) {
+          const dataCadastro = item.inicio_medicacao;
+          const horaCadastro = item.ultimadose || "00:00";
+
+          if (dataCadastro) {
+            const apenasData = String(dataCadastro).substring(0, 10);
+            const dataLocalStr = `${apenasData}T${horaCadastro}:00`;
+            const parsed = new Date(dataLocalStr);
+            if (!isNaN(parsed.getTime())) dataReferencia = parsed;
+          }
+        }
+
+        if (!dataReferencia) continue;
+
+        const dataProximaDose = new Date(
+          dataReferencia.getTime() + freqHoras * 60 * 60 * 1000,
+        );
+
+        const agora = new Date();
+        let gatilhoNotificacao = dataProximaDose;
+
+        if (dataProximaDose <= agora) {
+          gatilhoNotificacao = new Date(agora.getTime() + 5000);
+        }
 
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: `💊 ${item.nome_medicacao}`,
-            body: "Hora de tomar seu medicamento.",
+            title: `💊 Hora do Remédio: ${item.nome_medicacao}`,
+            body: `Está na hora de tomar o seu medicamento.`,
+            sound: true,
+            priority: "max",
           },
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DATE,
-            date: data,
+            date: gatilhoNotificacao,
           },
         });
       }
     } catch (e) {
-      console.log("Erro notificação:", e);
+      console.log("Erro no agendamento:", e);
     }
   }
 
-  const loadHistorico = async () => {
-    try {
-      const token = await AsyncStorage.getItem("token");
+  const getProximaDose = (medicamento) => {
+    if (!medicamento || !medicamento.frequencia) return "---";
 
-      const response = await api.get("historico/todos", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    const ultimaTomada = hist.find(
+      (h) => String(h.id_medicacao) === String(medicamento.id_medicacao),
+    );
 
-      setHist(response.data);
+    let dataReferencia;
 
-      return response.data;
-    } catch (error) {
-      console.log("Erro hist:", error);
-      return [];
+    // Caso 1: Já existe um histórico de tomada
+    if (ultimaTomada && ultimaTomada.data_tomada) {
+      const parsed = new Date(ultimaTomada.data_tomada);
+      if (!isNaN(parsed.getTime())) {
+        dataReferencia = parsed;
+      }
     }
-  };
 
+    // Caso 2: Não tem histórico, monta usando os dados de cadastro
+    if (!dataReferencia && medicamento.inicio_medicacao) {
+      const apenasData = String(medicamento.inicio_medicacao).substring(0, 10);
+      const horaCadastro = medicamento.ultimadose || "00:00";
+
+      // Agora a string é convertida em Date com segurança no escopo correto
+      const parsed = new Date(`${apenasData}T${horaCadastro}:00`);
+      if (!isNaN(parsed.getTime())) {
+        dataReferencia = parsed;
+      }
+    }
+
+    // Se mesmo assim não conseguir gerar uma data válida, sai da função
+    if (!dataReferencia) return "---";
+
+    const horasParaAdicionar = parseInt(medicamento.frequencia) || 8;
+
+    // Calcula o momento exato da próxima dose
+    const proximaDoseData = new Date(
+      dataReferencia.getTime() + horasParaAdicionar * 60 * 60 * 1000,
+    );
+
+    const agora = new Date();
+
+    const atrasado = proximaDoseData < agora;
+    medicamento.status = atrasado ? "atrasado" : "ok";
+    const eHoje =
+      proximaDoseData.toLocaleDateString() === agora.toLocaleDateString();
+
+    return proximaDoseData.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      day: eHoje ? undefined : "2-digit",
+      month: eHoje ? undefined : "2-digit",
+    });
+  };
+  // --- CARREGAMENTO DE DADOS ---
   const loadMedicacoes = async () => {
     try {
-      const token = await AsyncStorage.getItem("token");
-
-      const response = await api.get("medicamentos", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
+      const response = await api.get("medicamentos");
       setMeds(response.data);
-
-      if (response.data.length > 0) {
-        await agendarLembretes(response.data);
-      }
+      if (response.data.length > 0) agendarLembretes(response.data);
     } catch (error) {
       console.log("Erro meds:", error);
     }
   };
 
+  const loadHistorico = async () => {
+    try {
+      const response = await api.get("historico/todos");
+      setHist(response.data);
+    } catch (error) {
+      console.log("Erro hist:", error);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
-
-    await loadHistorico();
-    await loadMedicacoes();
-
+    await Promise.all([loadMedicacoes(), loadHistorico()]);
     setRefreshing(false);
   };
 
@@ -316,56 +288,29 @@ export default function HomeScreen({ navigation }) {
     onRefresh();
   }, []);
 
-  async function executarSalvarHistorico(id, dataFinal) {
+  // --- AÇÕES ---
+  async function marcarComoTomado(id) {
     try {
-      const token = await AsyncStorage.getItem("token");
+      await api.post(`/historico/${id}`);
 
-      await api.post(
-        `/historico/${id}`,
-        {
-          data_tomada: dataFinal,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      await onRefresh();
+      await Promise.all([loadHistorico(), loadMedicacoes()]);
 
       Alert.alert("Sucesso", "Dose registrada!");
     } catch (error) {
       console.log(error);
+
       Alert.alert("Erro", "Não foi possível registrar.");
     }
   }
 
-  async function marcarComoTomado(id) {
-    await executarSalvarHistorico(id, new Date());
-  }
-
   async function deletarMedicacao(id) {
     Alert.alert("Excluir", "Deseja excluir?", [
-      {
-        text: "Cancelar",
-      },
+      { text: "Não" },
       {
         text: "Sim",
         onPress: async () => {
-          try {
-            const token = await AsyncStorage.getItem("token");
-
-            await api.delete(`/medicamentosApagar/${id}`, {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            });
-
-            await loadMedicacoes();
-          } catch (error) {
-            console.log(error);
-          }
+          await api.delete(`/medicamentosApagar/${id}`);
+          loadMedicacoes();
         },
       },
     ]);
@@ -379,26 +324,8 @@ export default function HomeScreen({ navigation }) {
     <View style={styles.container}>
       <Header />
 
-      <ModalHoraAtrasada
-        visible={modalVisivel}
-        onConfirm={async (dataDigitada) => {
-          setModalVisivel(false);
-
-          if (idSendoMarcado) {
-            await executarSalvarHistorico(idSendoMarcado, dataDigitada);
-          }
-
-          setIdSendoMarcado(null);
-        }}
-        onCancel={() => {
-          setModalVisivel(false);
-          setIdSendoMarcado(null);
-        }}
-      />
-
       <View style={styles.searchBox}>
         <Ionicons name="search" size={16} color={colors.textMuted} />
-
         <TextInput
           style={styles.searchInput}
           placeholder="Pesquisar..."
@@ -412,14 +339,21 @@ export default function HomeScreen({ navigation }) {
           style={[styles.tab, tab === "ativos" && styles.tabActive]}
           onPress={() => setTab("ativos")}
         >
-          <Text style={styles.tabText}>ATIVOS</Text>
+          <Text
+            style={[styles.tabText, tab === "ativos" && styles.tabTextActive]}
+          >
+            ATIVOS
+          </Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={[styles.tab, tab === "tomados" && styles.tabActive]}
           onPress={() => setTab("tomados")}
         >
-          <Text style={styles.tabText}>TOMADOS</Text>
+          <Text
+            style={[styles.tabText, tab === "tomados" && styles.tabTextActive]}
+          >
+            TOMADOS
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -431,7 +365,7 @@ export default function HomeScreen({ navigation }) {
                 med={item}
                 onDelete={deletarMedicacao}
                 onCheck={marcarComoTomado}
-                proximaDose="Em breve"
+                proximaDose={getProximaDose(item)}
                 navigation={navigation}
               />
             ))
@@ -439,9 +373,12 @@ export default function HomeScreen({ navigation }) {
               const dadosMed = meds.find(
                 (m) => String(m.id_medicacao) === String(item.id_medicacao),
               );
-
               return (
-                <Tomados key={item.id_historico} hist={item} med={dadosMed} />
+                <Tomados
+                  key={item.id_historico}
+                  hist={item}
+                  med={dadosMed || { nome_medicacao: "Removido" }}
+                />
               );
             })}
       </ScreenWrapper>
@@ -449,186 +386,94 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
-const modalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-
-  box: {
-    width: "100%",
-    backgroundColor: "#fff",
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-  },
-
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 15,
-  },
-
-  titulo: {
-    fontSize: 18,
-    fontWeight: "700",
-  },
-
-  descricao: {
-    marginBottom: 10,
-  },
-
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    height: 45,
-    paddingHorizontal: 15,
-  },
-
-  inputErro: {
-    borderColor: "red",
-  },
-
-  erro: {
-    color: "red",
-    marginTop: 5,
-  },
-
-  botoes: {
-    flexDirection: "row",
-    marginTop: 20,
-    gap: 10,
-  },
-
-  btnCancelar: {
-    flex: 1,
-    height: 42,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-  },
-
-  btnCancelarTexto: {
-    fontWeight: "600",
-  },
-
-  btnConfirmar: {
-    flex: 1,
-    height: 42,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: colors.secondary,
-    borderRadius: 10,
-  },
-
-  btnConfirmarTexto: {
-    color: "#fff",
-    fontWeight: "700",
-  },
-});
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: spacing.md,
   },
-
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
-    borderRadius: 999,
-    paddingHorizontal: 15,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
     height: 46,
-    gap: 10,
+    gap: spacing.sm,
     marginBottom: 20,
     marginTop: 10,
+    elevation: 2,
   },
-
-  searchInput: {
-    flex: 1,
-  },
-
+  searchInput: { flex: 1, fontSize: 14, color: colors.text },
   tabs: {
     flexDirection: "row",
     backgroundColor: colors.cardBlue,
-    borderRadius: 999,
+    borderRadius: radius.full,
     padding: 4,
-    marginBottom: 15,
+    marginBottom: spacing.md,
   },
-
   tab: {
     flex: 1,
     height: 36,
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 999,
+    borderRadius: radius.full,
   },
-
-  tabActive: {
-    backgroundColor: colors.secondary,
-  },
-
-  tabText: {
-    color: "#fff",
-    fontWeight: "700",
-  },
-
+  tabActive: { backgroundColor: colors.secondary },
+  tabText: { fontSize: 13, fontWeight: "700", color: colors.textLight },
+  tabTextActive: { color: "#fff" },
   card: {
     backgroundColor: colors.cardBlue,
     borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
   },
-
-  info: {
-    flex: 1,
-  },
-
-  medName: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: colors.primary,
-  },
-
-  medDesc: {
-    marginTop: 5,
-    fontSize: 15,
-  },
-
-  proximaDoseText: {
-    marginTop: 5,
-    color: "green",
-  },
-
-  actions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 15,
-    marginTop: 15,
-  },
-
-  btnGreen: {
-    width: 60,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "green",
+  cardHL: { borderLeftWidth: 4, borderLeftColor: colors.secondary },
+  cardRow: { flexDirection: "row", gap: spacing.sm },
+  img: {
+    width: 46,
+    height: 46,
+    borderRadius: radius.sm,
+    backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
   },
-
-  btnRed: {
-    width: 60,
+  info: { flex: 1 },
+  medName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.primary,
+    fontStyle: "italic",
+  },
+  medDesc: { fontSize: 16, color: colors.text, marginTop: 2 },
+  badge: {
+    backgroundColor: colors.error,
+    borderRadius: radius.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    alignSelf: "flex-start",
+    marginTop: 5,
+  },
+  badgeText: { color: "#fff", fontSize: 11, fontWeight: "600" },
+  actions: {
+    flexDirection: "row",
+    gap: spacing.lg,
+    marginTop: spacing.md,
+    justifyContent: "flex-end",
+  },
+  btnGreen: {
+    width: 100,
     height: 40,
-    borderRadius: 12,
-    backgroundColor: "red",
+    borderRadius: 15,
+    backgroundColor: colors.secondary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  btnRed: {
+    width: 100,
+    height: 40,
+    borderRadius: 15,
+    backgroundColor: colors.error,
     justifyContent: "center",
     alignItems: "center",
   },

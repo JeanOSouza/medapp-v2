@@ -2,6 +2,7 @@ const Historico = require("../models/Historico");
 const Medicacao = require("../models/Medicacao");
 
 module.exports = {
+  // Lista o histórico de forma simples (ordem decrescente)
   async list(req, res) {
     try {
       const historico = await Historico.findAll({
@@ -17,29 +18,46 @@ module.exports = {
     }
   },
 
+  // 🔄 BUSCA SEGURA: Cruza os dados manualmente para evitar erros de relacionamento no Sequelize
   async listAll(req, res) {
     try {
-      const userId = req.userId;
-
+      // 1. Busca todos os registros de histórico salvos no banco
       const doses = await Historico.findAll({
-        include: [
-          {
-            model: Medicacao,
-            where: { id_usuario: userId },
-            required: true,
-            attributes: ["nome_medicacao", "dosagem"],
-          },
-        ],
         order: [["data_tomada", "DESC"]],
       });
 
-      return res.json(doses);
+      // 2. Busca todas as medicações cadastradas (tanto ativas quanto inativas)
+      const todasMedicacoes = await Medicacao.findAll();
+
+      // 3. Joga os dados na memória e faz o cruzamento via JavaScript puro
+      const dadosFormatados = doses.map((dose) => {
+        // Converte a instância do Sequelize em um objeto JS comum para podermos manipular
+        const dosePura = dose.get({ plain: true });
+
+        // Procura se o id_medicacao da dose bate com o id_medicacao de algum remédio
+        const remedio = todasMedicacoes.find(
+          (m) => Number(m.id_medicacao) === Number(dosePura.id_medicacao),
+        );
+
+        // Injeta a propriedade .medicacao que o seu front-end (HomeScreen) espera receber
+        dosePura.medicacao = {
+          nome_medicacao: remedio
+            ? remedio.nome_medicacao
+            : "Medicamento Inativo/Removido",
+          dosagem: remedio ? remedio.dosagem : "",
+        };
+
+        return dosePura;
+      });
+
+      return res.json(dadosFormatados);
     } catch (error) {
+      console.error("Erro no listAll seguro:", error.message);
       return res.status(500).json({ error: error.message });
     }
   },
 
-  // ✅ AQUI FOI O AJUSTE PRINCIPAL
+  // Registro de nova dose (aceitando a data/hora vinda do aplicativo)
   async registroDose(req, res) {
     try {
       const { id_medicacao } = req.params;
