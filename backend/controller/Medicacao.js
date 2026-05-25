@@ -144,16 +144,18 @@ module.exports = {
       });
     }
   },
-
   async finalizarMedicacao(req, res) {
     try {
       const { id } = req.params;
-      console.log("ID RECEBIDO:", id);
-      console.log("USER:", req.userId);
 
-      await Medicacao.update(
+      const dataFinalizacao = new Date();
+
+      console.log("SALVANDO DATA:", dataFinalizacao);
+
+      const atualizado = await Medicacao.update(
         {
           status: "inativo",
+          fim_medicacao: dataFinalizacao,
         },
         {
           where: {
@@ -163,14 +165,16 @@ module.exports = {
         },
       );
 
-      return res.json({
-        message: "Medicamento finalizado",
-      });
+      console.log("RESULTADO UPDATE:", atualizado);
+
+      const medicacao = await Medicacao.findByPk(id);
+
+      return res.json(medicacao);
     } catch (error) {
       console.log(error);
 
       return res.status(500).json({
-        error: "Erro ao finalizar medicamento",
+        error: error.message,
       });
     }
   },

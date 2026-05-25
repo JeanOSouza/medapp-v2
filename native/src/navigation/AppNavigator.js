@@ -17,8 +17,7 @@ const Stack = createNativeStackNavigator();
 // --- NAVEGADOR PRINCIPAL ---
 export default function AppNavigator() {
   const [loading, setLoading] = useState(true);
-  const [isLogged, setIsLogged] = useState(false);
-
+  const [isLogged, setIsLogged] = useState(null);
   useEffect(() => {
     verificarLogin();
   }, []);
@@ -37,11 +36,19 @@ export default function AppNavigator() {
     }
   };
 
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const token = await AsyncStorage.getItem("token");
+
+      setIsLogged(!!token);
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, []);
   // Enquanto verifica login
-  if (loading) {
+  if (loading || isLogged === null) {
     return <SplashScreen />;
   }
-
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>

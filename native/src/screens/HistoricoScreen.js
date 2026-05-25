@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TextInput,
-  FlatList,
   TouchableOpacity,
   RefreshControl,
   ScrollView,
@@ -52,8 +51,7 @@ export default function HistoricoScreen() {
   const loadRegistro = async () => {
     try {
       const response = await api.get("/medicamentos");
-
-      setMedAtivos(response.data);
+      setMedAtivos(response.data || []);
     } catch (error) {
       console.log("Erro ao carregar ativos:", error);
     }
@@ -63,8 +61,7 @@ export default function HistoricoScreen() {
   const loadInativos = async () => {
     try {
       const response = await api.get("/medicamentos/inativos");
-
-      setMedInativos(response.data);
+      setMedInativos(response.data || []);
     } catch (error) {
       console.log("Erro ao carregar inativos:", error);
     }
@@ -73,10 +70,7 @@ export default function HistoricoScreen() {
   // --- REFRESH ---
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-
-    await loadRegistro();
-    await loadInativos();
-
+    await Promise.all([loadRegistro(), loadInativos()]);
     setRefreshing(false);
   }, []);
 
@@ -128,67 +122,65 @@ export default function HistoricoScreen() {
 
       {/* ATIVOS */}
       <Text style={styles.sectionTitle}>Medicações Ativas</Text>
-
-      <FlatList
-        data={filteredAtivos}
-        keyExtractor={(item) => String(item.id_medicacao)}
-        scrollEnabled={false}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={() => (
+      <View style={styles.listContent}>
+        {filteredAtivos.length > 0 ? (
+          filteredAtivos.map((item, index) => (
+            <CartaoHistorico
+              key={
+                item.id_medicacao ? String(item.id_medicacao) : String(index)
+              }
+              medCad={item}
+              onPress={() =>
+                navigation.navigate("DescricaoRemedio", {
+                  medicamento: item,
+                })
+              }
+            />
+          ))
+        ) : (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
               Nenhum medicamento ativo encontrado.
             </Text>
           </View>
         )}
-        renderItem={({ item }) => (
-          <CartaoHistorico
-            medCad={item}
-            onPress={() =>
-              navigation.navigate("DescricaoRemedio", {
-                medicamento: item,
-              })
-            }
-          />
-        )}
-      />
+      </View>
 
       {/* INATIVOS */}
       <Text style={styles.sectionTitle}>Medicações Inativas</Text>
-
-      <FlatList
-        data={filteredInativos}
-        keyExtractor={(item) => String(item.id_medicacao)}
-        scrollEnabled={false}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={() => (
+      <View style={styles.listContent}>
+        {filteredInativos.length > 0 ? (
+          filteredInativos.map((item, index) => (
+            <CartaoHistorico
+              key={
+                item.id_medicacao ? String(item.id_medicacao) : String(index)
+              }
+              medCad={item}
+              onPress={() =>
+                navigation.navigate("DescricaoRemedio", {
+                  medicamento: item,
+                })
+              }
+            />
+          ))
+        ) : (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
               Nenhum medicamento inativo encontrado.
             </Text>
           </View>
         )}
-        renderItem={({ item }) => (
-          <CartaoHistorico
-            medCad={item}
-            onPress={() =>
-              navigation.navigate("DescricaoRemedio", {
-                medicamento: item,
-              })
-            }
-          />
-        )}
-      />
+      </View>
     </ScrollView>
   );
 }
 
+// ... Os seus styles continuam exatamente iguais abaixo ...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
-
   title: {
     textAlign: "center",
     fontSize: 22,
@@ -197,7 +189,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 15,
   },
-
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
@@ -206,12 +197,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 10,
   },
-
   searchContainer: {
     paddingHorizontal: spacing.md,
     marginBottom: spacing.md,
   },
-
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -220,74 +209,59 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     height: 48,
     gap: spacing.sm,
-
     elevation: 3,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-
   searchInput: {
     flex: 1,
     fontSize: 16,
     color: colors.text,
   },
-
   listContent: {
     paddingHorizontal: spacing.md,
     paddingBottom: 10,
   },
-
   card: {
     backgroundColor: colors.cardBlue,
     borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.md,
-
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.05)",
   },
-
   cardRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-
   info: {
     flex: 1,
   },
-
   medName: {
     fontSize: 18,
     fontWeight: "700",
     color: colors.primary,
     marginBottom: 4,
   },
-
   medDesc: {
     fontSize: 14,
     color: colors.text,
     fontWeight: "600",
   },
-
   medFreq: {
     fontSize: 14,
     color: colors.secondary,
     marginTop: 4,
     fontWeight: "500",
   },
-
   emptyContainer: {
     justifyContent: "center",
     alignItems: "center",
     marginVertical: 20,
   },
-
   emptyText: {
     fontSize: 15,
     color: colors.textMuted,

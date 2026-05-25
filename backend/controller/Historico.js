@@ -43,7 +43,7 @@ module.exports = {
   async registroDose(req, res) {
     try {
       const { id_medicacao } = req.params;
-      const { data_tomada } = req.body; // 👈 agora aceita hora do app
+      const { data_tomada } = req.body;
 
       const dose = await Historico.create({
         id_medicacao: Number(id_medicacao),

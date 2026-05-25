@@ -24,6 +24,8 @@ export default function LoginScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
+    await AsyncStorage.clear();
+
     if (!email || !senha) {
       Alert.alert("Atenção", "Por favor, preencha todos os campos.");
       return;
@@ -32,19 +34,19 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
 
     try {
-      // 1. Enviando os dados para o backend
-      // Verifique se o backend espera 'password' ou 'senha'
       const response = await api.post("/login", {
-        email: email.trim().toLowerCase(), // Remove espaços extras
+        email: email.trim().toLowerCase(),
         senha: senha.trim(),
       });
 
-      const { token } = response.data;
+      console.log("Login response", response.data);
 
-      // 2. Salvando o token (com try/catch para evitar o erro de Native Module)
+      const token =
+        response.data.token || response.data.acessToken || response.data.jwt;
+
       try {
         if (token) {
-          await AsyncStorage.setItem("token", response.data.token);
+          await AsyncStorage.setItem("token", token);
           await AsyncStorage.setItem(
             "user",
             JSON.stringify(response.data.user),
@@ -56,7 +58,10 @@ export default function LoginScreen({ navigation }) {
       }
 
       // 3. Sucesso!
-      navigation.navigate("MainTabs");
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "MainTabs" }],
+      });
     } catch (error) {
       // 4. Tratamento de Erro detalhado
       console.log("Erro no Login:", error.response?.data || error.message);
