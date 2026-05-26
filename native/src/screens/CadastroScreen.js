@@ -9,11 +9,13 @@ import {
   Platform,
   Alert,
 } from "react-native";
+import Checkbox from "expo-checkbox";
 import { colors, spacing } from "../theme";
 import Logo from "../components/Logo";
 import Input from "../components/Input";
 import Select from "../components/Select";
 import Button from "../components/Button";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const racaOpts = [
   { value: "branca", label: "Branca" },
@@ -73,7 +75,7 @@ export default function CadastroScreen({ navigation }) {
     navigation.navigate("Cadastro2", {
       formData: {
         nome,
-        data: dataParaBanco, // Aqui já vai no padrão do SQLite/MySQL
+        data: dataParaBanco, // Aqui já vai no padrão do SQLite/PostgreSQL
         raca,
         genero,
         cidade,
@@ -83,91 +85,108 @@ export default function CadastroScreen({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
+    // Definimos a cor de fundo nativa na SafeAreaView para evitar o buraco branco
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={["top", "bottom"]}
     >
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        // No Android, o comportamento nativo (undefined) funciona perfeitamente com ScrollView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.container}
       >
-        <View style={styles.logoArea}>
-          <Logo />
-          <Text style={styles.title}>Faça seu cadastro</Text>
-        </View>
-
-        <Input
-          label="Nome completo"
-          value={nome}
-          onChangeText={setNome}
-          placeholder="Ex: João Silva"
-        />
-
-        <Input
-          label="Digite o nome da cidade em que reside"
-          value={cidade}
-          onChangeText={setCidade}
-          placeholder="Ex: Viçosa"
-        />
-
-        <Input
-          label="Digite o estado de residencia"
-          value={estado}
-          onChangeText={setEstado}
-          placeholder="Ex: Minas Gerais"
-        />
-
-        <Input
-          label="Data de nascimento"
-          value={data}
-          onChangeText={handleDataChange} // Usa a função da máscara
-          placeholder="DD/MM/AAAA"
-          keyboardType="numeric"
-          maxLength={10}
-        />
-
-        <Select
-          label="Cor/ raça"
-          value={raca}
-          options={racaOpts}
-          onSelect={setRaca}
-        />
-
-        <Select
-          label="Gênero"
-          value={genero}
-          options={generoOpts}
-          onSelect={setGenero}
-        />
-
-        <TouchableOpacity
-          style={styles.termsRow}
-          onPress={() => setTermos(!termos)}
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.checkbox, termos && styles.checked]}>
-            {termos && <Text style={styles.checkMark}>✓</Text>}
+          <View style={styles.logoArea}>
+            <Logo />
+            <Text style={styles.title}>Faça seu cadastro</Text>
           </View>
-          <Text style={styles.termsText}>
-            Concordo com os Termos e a Política de Privacidade.
-          </Text>
-        </TouchableOpacity>
 
-        <Button
-          title="Próximo passo"
-          onPress={handleNextStep}
-          style={{ marginBottom: spacing.md }}
-        />
+          <Input
+            label="Nome completo"
+            value={nome}
+            onChangeText={setNome}
+            placeholder="Ex: João Silva"
+          />
 
-        <TouchableOpacity
-          onPress={() => navigation.navigate("Login")}
-          style={styles.loginRow}
-        >
-          <Text style={styles.loginText}>
-            Já tem uma conta? <Text style={styles.link}>Iniciar sessão</Text>
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <Input
+            label="Digite o nome da cidade em que reside"
+            value={cidade}
+            onChangeText={setCidade}
+            placeholder="Ex: Viçosa"
+          />
+
+          <Input
+            label="Digite o estado de residencia"
+            value={estado}
+            onChangeText={setEstado}
+            placeholder="Ex: Minas Gerais"
+          />
+
+          <Input
+            label="Data de nascimento"
+            value={data}
+            onChangeText={handleDataChange}
+            placeholder="DD/MM/AAAA"
+            keyboardType="numeric"
+            maxLength={10}
+          />
+
+          <Select
+            label="Cor/ raça"
+            value={raca}
+            options={racaOpts}
+            onSelect={setRaca}
+          />
+
+          <Select
+            label="Gênero"
+            value={genero}
+            options={generoOpts}
+            onSelect={setGenero}
+          />
+
+          {/* SESSÃO DOS TERMOS ADAPTADA COM O CLICK */}
+          <View style={styles.termsRow}>
+            <Checkbox
+              value={termos}
+              onValueChange={setTermos}
+              color={termos ? colors.secondary : undefined}
+              style={styles.checkbox}
+            />
+            <Text style={styles.termsText}>
+              Concordo com os{" "}
+              {/* O texto agora é clicável e chama a tela de Termos */}
+              <Text
+                style={styles.linkUnderline}
+                onPress={() => navigation.navigate("Termos")}
+              >
+                Termos e a Política de Privacidade
+              </Text>
+              .
+            </Text>
+          </View>
+
+          <Button
+            title="Próximo passo"
+            onPress={handleNextStep}
+            style={{ marginBottom: spacing.md }}
+          />
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Login")}
+            style={styles.loginRow}
+          >
+            <Text style={styles.loginText}>
+              Já tem uma conta? <Text style={styles.link}>Iniciar sessão</Text>
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -188,9 +207,10 @@ const styles = StyleSheet.create({
   },
   termsRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: spacing.sm,
     marginBottom: spacing.lg,
+    paddingHorizontal: 4,
   },
   checkbox: {
     width: 20,
@@ -198,13 +218,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.secondary,
     borderRadius: 4,
-    marginTop: 2,
-    justifyContent: "center",
-    alignItems: "center",
   },
-  checked: { backgroundColor: colors.secondary },
-  checkMark: { color: "#fff", fontSize: 12, fontWeight: "bold" },
   termsText: { flex: 1, fontSize: 15, color: colors.secondary },
+  linkUnderline: {
+    fontWeight: "bold",
+    textDecorationLine: "underline",
+  },
   loginRow: { alignItems: "center", marginTop: 10 },
   loginText: { fontSize: 15, color: colors.textLight },
   link: { color: colors.secondary, fontWeight: "600" },

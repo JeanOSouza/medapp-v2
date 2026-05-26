@@ -9,6 +9,7 @@ import CadastroScreen from "../screens/CadastroScreen";
 import Cadastro2Screen from "../screens/Cadastro2Screen";
 import PerfilScreen from "../screens/Perfil";
 import HistoricoMedicamentoScreen from "../screens/DescricaoRemedio";
+import TermosScreen from "../components/termosScreen";
 
 import MainTabs from "./MainTabs";
 
@@ -67,6 +68,7 @@ export default function AppNavigator() {
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Cadastro" component={CadastroScreen} />
             <Stack.Screen name="Cadastro2" component={Cadastro2Screen} />
+            <Stack.Screen name="Termos" component={TermosScreen} />
           </>
         )}
       </Stack.Navigator>

@@ -13,6 +13,8 @@ import Header from "../components/Header";
 import ScreenWrapper from "../components/ScreenWrapper";
 import api from "../../service/api";
 import * as Notifications from "expo-notifications";
+// 1. Importar a SafeAreaView para proteger o topo do app contra o notch/relógio
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // --- CONFIGURAÇÃO DE NOTIFICAÇÕES ---
 Notifications.setNotificationHandler({
@@ -139,7 +141,7 @@ export default function HomeScreen({ navigation }) {
     }
   }
 
-  // --- AGENDAMENTO DA PRÓXIMA DOSE APENAS SE JÀ TIVER SIDO TOMADO ---
+  // --- AGENDAMENTO DA PRÓXIMA DOSE APENAS SE JÁ TIVER SIDO TOMADO ---
   async function agendarLembretes(listaMedicamentos) {
     try {
       await Notifications.cancelAllScheduledNotificationsAsync();
@@ -226,19 +228,16 @@ export default function HomeScreen({ navigation }) {
       const apenasData = String(medicamento.inicio_medicacao).substring(0, 10);
       const horaCadastro = medicamento.ultimadose || "00:00";
 
-      // Agora a string é convertida em Date com segurança no escopo correto
       const parsed = new Date(`${apenasData}T${horaCadastro}:00`);
       if (!isNaN(parsed.getTime())) {
         dataReferencia = parsed;
       }
     }
 
-    // Se mesmo assim não conseguir gerar uma data válida, sai da função
     if (!dataReferencia) return "---";
 
     const horasParaAdicionar = parseInt(medicamento.frequencia) || 8;
 
-    // Calcula o momento exato da próxima dose
     const proximaDoseData = new Date(
       dataReferencia.getTime() + horasParaAdicionar * 60 * 60 * 1000,
     );
@@ -257,6 +256,7 @@ export default function HomeScreen({ navigation }) {
       month: eHoje ? undefined : "2-digit",
     });
   };
+
   // --- CARREGAMENTO DE DADOS ---
   const loadMedicacoes = async () => {
     try {
@@ -291,14 +291,28 @@ export default function HomeScreen({ navigation }) {
   // --- AÇÕES ---
   async function marcarComoTomado(id) {
     try {
-      await api.post(`/historico/${id}`);
+      const agora = new Date();
+
+      // 2. AjustE manual Da diferença de fuso horário do Brasil (UTC-3)
+      const offset = agora.getTimezoneOffset() * 60 * 1000;
+      const dataLocal = new Date(agora.getTime() - offset);
+
+      // 3. Formata para o padrão ISO "limpo" (AAAA-MM-DDTHH:MM:SS) retirando o 'Z' do final
+      const dataFormatadaBrasil = dataLocal.toISOString().slice(0, 19);
+
+      console.log("Data gerada no fuso brasileiro:", dataFormatadaBrasil);
+      const dadosCorpo = {
+        data_tomada: dataFormatadaBrasil,
+      };
+
+      const response = await api.post(`/historico/${id}`, dadosCorpo);
+
+      console.log("Resposta do servidor:", response.data);
 
       await Promise.all([loadHistorico(), loadMedicacoes()]);
-
       Alert.alert("Sucesso", "Dose registrada!");
     } catch (error) {
-      console.log(error);
-
+      console.log("Erro:", error.message);
       Alert.alert("Erro", "Não foi possível registrar.");
     }
   }
@@ -365,7 +379,7 @@ export default function HomeScreen({ navigation }) {
                 med={item}
                 onDelete={deletarMedicacao}
                 onCheck={marcarComoTomado}
-                proximaDose={getProximaDose(item)}
+                proximaDose={getProximaDose(item)} // Executado por item na renderização com segurança
                 navigation={navigation}
               />
             ))
@@ -390,7 +404,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
   },
   searchBox: {
     flexDirection: "row",

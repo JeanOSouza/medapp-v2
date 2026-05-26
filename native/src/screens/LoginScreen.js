@@ -17,6 +17,7 @@ import Logo from "../components/Logo";
 import Input from "../components/Input";
 import Button from "../components/Button";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
@@ -81,56 +82,57 @@ export default function LoginScreen({ navigation }) {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={styles.container}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.logoArea}>
-          <Logo size="lg" />
-          <Text style={styles.subtitle}>
-            Gerencie seus medicamentos{"\n"}com facilidade.
-          </Text>
-        </View>
-
-        <Input
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-
-        <Input
-          label="Senha"
-          value={senha}
-          onChangeText={setSenha}
-          secureTextEntry
-        />
-
-        <TouchableOpacity style={styles.forgotRow}>
-          <Text style={styles.forgot}>Esqueceu a senha?</Text>
-        </TouchableOpacity>
-
-        <Button
-          title={loading ? "Carregando..." : "Entrar"}
-          onPress={handleLogin}
-          disabled={loading}
-        />
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate("Cadastro")}
-          style={styles.registerRow}
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.registerText}>
-            Não tem uma conta? <Text style={styles.link}>Cadastre-se</Text>
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <View style={styles.logoArea}>
+            <Logo size="lg" />
+            <Text style={styles.subtitle}>
+              Gerencie seus medicamentos{"\n"}com facilidade.
+            </Text>
+          </View>
+
+          <Input
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+
+          <Input
+            label="Senha"
+            value={senha}
+            onChangeText={setSenha}
+            secureTextEntry
+          />
+
+          <TouchableOpacity style={styles.forgotRow}>
+            <Text style={styles.forgot}>Esqueceu a senha?</Text>
+          </TouchableOpacity>
+
+          <Button
+            title={loading ? "Carregando..." : "Entrar"}
+            onPress={handleLogin}
+            disabled={loading}
+          />
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Cadastro")}
+            style={styles.registerRow}
+          >
+            <Text style={styles.registerText}>
+              Não tem uma conta? <Text style={styles.link}>Cadastre-se</Text>
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

@@ -2,6 +2,8 @@ import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
+// 1. Importar o hook de Safe Area
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import HomeScreen from "../screens/HomeScreen";
 import PerfilScreen from "../screens/Perfil";
@@ -24,12 +26,20 @@ function AddButton({ onPress }) {
 }
 
 export default function MainTabs() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height: insets.bottom > 0 ? 60 + insets.bottom : 70,
+            paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
+          },
+        ],
         tabBarActiveTintColor: colors.secondary,
         tabBarInactiveTintColor: colors.textMuted,
       }}
@@ -83,21 +93,15 @@ export default function MainTabs() {
 const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: "#fff",
-    height: 70,
     borderTopWidth: 0,
-
     elevation: 10,
-
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: -2,
     },
-
     shadowOpacity: 0.1,
     shadowRadius: 5,
-
-    paddingBottom: 10,
   },
 
   addContainer: {
@@ -111,9 +115,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-
     backgroundColor: colors.secondary,
-
     justifyContent: "center",
     alignItems: "center",
   },
