@@ -67,7 +67,7 @@ module.exports = {
   // ✅ LOGIN
   async login(req, res) {
     try {
-      const { email, senha } = req.body;
+      const { email, senha, devideid } = req.body;
 
       if (!email || !senha) {
         return res.status(400).json({ message: "Preencha todos os campos." });
@@ -103,7 +103,7 @@ module.exports = {
       const token = jwt.sign(
         { id: user.id_usuario },
         process.env.JWT_SECRET || "segredo_dev",
-        { expiresIn: "24h" },
+        { expiresIn: "7d" },
       );
 
       res.json({
@@ -117,6 +117,7 @@ module.exports = {
           raca: user.raca,
           comorbidades: user.comorbidades,
           data_nascimento: user.data_nascimento,
+          devideid: user.devide_id,
         },
       });
     } catch (error) {

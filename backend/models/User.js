@@ -47,6 +47,10 @@ const User = sequelize.define("User", {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  device_id: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
 });
 
 // Associação

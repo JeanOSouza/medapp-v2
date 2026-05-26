@@ -9,8 +9,9 @@ import {
   Platform,
   Alert,
 } from "react-native";
-
 // Importações do projeto
+
+import * as Application from "expo-application";
 import api from "../../service/api";
 import { colors, spacing } from "../theme";
 import Logo from "../components/Logo";
@@ -35,9 +36,20 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
 
     try {
+      let deviceid = null;
+
+      if (Platform.OS === "android") {
+        deviceid = Application.androidId;
+      } else if (Platform.OS === "ios") {
+        deviceid = await Application.getIosIdForVendorAsync();
+      }
+
+      console.log("DEVICE LOGIN:", deviceid);
+
       const response = await api.post("/login", {
         email: email.trim().toLowerCase(),
         senha: senha.trim(),
+        deviceid,
       });
 
       console.log("Login response", response.data);

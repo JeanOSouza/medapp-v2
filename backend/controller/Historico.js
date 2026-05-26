@@ -1,5 +1,5 @@
-const Historico = require("../models/Historico");
-const Medicacao = require("../models/Medicacao");
+const Historico = require("../models/Historico"); // Este modelo agora aponta para 'historico_meds'
+const Medicacao = require("../models/Medicacao"); // Este modelo aponta para 'medicacaos'
 
 module.exports = {
   // Lista o histórico de forma simples (ordem decrescente)
@@ -18,53 +18,40 @@ module.exports = {
     }
   },
 
-  // 🔄 BUSCA SEGURA: Cruza os dados manualmente para evitar erros de relacionamento no Sequelize
+  // 🔄 LISTAR TODOS (Simplificado, pois o nome já está gravado diretamente no histórico)
   async listAll(req, res) {
     try {
-      // 1. Busca todos os registros de histórico salvos no banco
+      // Busca todos os registros de histórico salvos na nova tabela historico_meds
       const doses = await Historico.findAll({
         order: [["data_tomada", "DESC"]],
       });
 
-      // 2. Busca todas as medicações cadastradas (tanto ativas quanto inativas)
-      const todasMedicacoes = await Medicacao.findAll();
-
-      // 3. Joga os dados na memória e faz o cruzamento via JavaScript puro
-      const dadosFormatados = doses.map((dose) => {
-        // Converte a instância do Sequelize em um objeto JS comum para podermos manipular
-        const dosePura = dose.get({ plain: true });
-
-        // Procura se o id_medicacao da dose bate com o id_medicacao de algum remédio
-        const remedio = todasMedicacoes.find(
-          (m) => Number(m.id_medicacao) === Number(dosePura.id_medicacao),
-        );
-
-        // Injeta a propriedade .medicacao que o seu front-end (HomeScreen) espera receber
-        dosePura.medicacao = {
-          nome_medicacao: remedio
-            ? remedio.nome_medicacao
-            : "Medicamento Inativo/Removido",
-          dosagem: remedio ? remedio.dosagem : "",
-        };
-
-        return dosePura;
-      });
-
-      return res.json(dadosFormatados);
+      // Retorna os dados direto do banco sem precisar cruzar na memória via JS puro!
+      return res.json(doses);
     } catch (error) {
-      console.error("Erro no listAll seguro:", error.message);
+      console.error("Erro no listAll:", error.message);
       return res.status(500).json({ error: error.message });
     }
   },
 
-  // Registro de nova dose (aceitando a data/hora vinda do aplicativo)
   async registroDose(req, res) {
     try {
       const { id_medicacao } = req.params;
       const { data_tomada } = req.body;
 
+      const remedio = await Medicacao.findOne({
+        where: { id_medicacao: Number(id_medicacao) },
+      });
+
+      if (!remedio) {
+        return res
+          .status(404)
+          .json({ error: "Medicamento não encontrado na tabela medicacaos." });
+      }
+
       const dose = await Historico.create({
         id_medicacao: Number(id_medicacao),
+        nome_medicacao: remedio.nome_medicacao,
         data_tomada: data_tomada ? new Date(data_tomada) : new Date(),
       });
 

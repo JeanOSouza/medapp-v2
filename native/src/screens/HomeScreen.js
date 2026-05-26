@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,17 +6,23 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
+
 import { Ionicons } from "@expo/vector-icons";
+import * as Notifications from "expo-notifications";
+
 import { colors, spacing, radius } from "../theme";
 import Header from "../components/Header";
 import ScreenWrapper from "../components/ScreenWrapper";
 import api from "../../service/api";
-import * as Notifications from "expo-notifications";
-// 1. Importar a SafeAreaView para proteger o topo do app contra o notch/relógio
-import { SafeAreaView } from "react-native-safe-area-context";
 
-// --- CONFIGURAÇÃO DE NOTIFICAÇÕES ---
+// ======================================================
+// NOTIFICAÇÕES
+// ======================================================
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -27,7 +33,118 @@ Notifications.setNotificationHandler({
   }),
 });
 
-function MedCard({ med, onDelete, onCheck, proximaDose, navigation }) {
+// ======================================================
+// MODAL
+// ======================================================
+
+function ModalHoraAtrasada({ visible, onConfirm, onCancel }) {
+  const [texto, setTexto] = useState("");
+  const [erro, setErro] = useState("");
+
+  function handleHorarioChange(text) {
+    let valor = text.replace(/\D/g, "");
+
+    if (valor.length > 4) {
+      valor = valor.substring(0, 4);
+    }
+
+    if (valor.length >= 2) {
+      valor = valor.replace(/^(\d{2})(\d+)/, "$1:$2");
+    }
+
+    setTexto(valor);
+
+    if (erro) {
+      setErro("");
+    }
+  }
+
+  function handleConfirmar() {
+    const regex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+    if (!regex.test(texto)) {
+      setErro("Digite um horário válido.");
+      return;
+    }
+
+    const [hora, minuto] = texto.split(":").map(Number);
+
+    const data = new Date();
+
+    data.setHours(hora);
+    data.setMinutes(minuto);
+    data.setSeconds(0);
+
+    if (data > new Date()) {
+      setErro("A hora não pode ser futura.");
+      return;
+    }
+
+    setTexto("");
+    setErro("");
+
+    onConfirm(data);
+  }
+
+  function handleCancelar() {
+    setTexto("");
+    setErro("");
+
+    onCancel();
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={modalStyles.overlay}
+      >
+        <View style={modalStyles.box}>
+          <View style={modalStyles.header}>
+            <Ionicons name="time-outline" size={22} color={colors.secondary} />
+
+            <Text style={modalStyles.titulo}>Remédio atrasado</Text>
+          </View>
+
+          <Text style={modalStyles.descricao}>Que horas você tomou?</Text>
+
+          <TextInput
+            style={[modalStyles.input, erro && modalStyles.inputErro]}
+            placeholder="HH:mm"
+            keyboardType="numeric"
+            value={texto}
+            onChangeText={handleHorarioChange}
+            autoFocus
+          />
+
+          {erro ? <Text style={modalStyles.erro}>{erro}</Text> : null}
+
+          <View style={modalStyles.botoes}>
+            <TouchableOpacity
+              style={modalStyles.btnCancelar}
+              onPress={handleCancelar}
+            >
+              <Text>Cancelar</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={modalStyles.btnConfirmar}
+              onPress={handleConfirmar}
+            >
+              <Text style={{ color: "#fff" }}>Confirmar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+// ======================================================
+// CARD
+// ======================================================
+
+function MedCard({ med, resultado, onDelete, onCheck, navigation }) {
   return (
     <TouchableOpacity
       activeOpacity={0.9}
@@ -37,7 +154,9 @@ function MedCard({ med, onDelete, onCheck, proximaDose, navigation }) {
         })
       }
     >
-      <View style={[styles.card, med.status === "atrasado" && styles.cardHL]}>
+      <View
+        style={[styles.card, resultado.status === "atrasado" && styles.cardHL]}
+      >
         <View style={styles.cardRow}>
           <View style={styles.img}>
             <Ionicons name="medical" size={22} color={colors.primary} />
@@ -54,16 +173,15 @@ function MedCard({ med, onDelete, onCheck, proximaDose, navigation }) {
               style={[
                 styles.medDesc,
                 {
-                  fontWeight: "500",
+                  fontWeight: "700",
                   color: "#255803",
-                  textAlign: "left",
                 },
               ]}
             >
-              Próxima: {proximaDose}
+              Próxima: {resultado.horario}
             </Text>
 
-            {med.status === "atrasado" && (
+            {resultado.status === "atrasado" && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>Atrasado</Text>
               </View>
@@ -91,255 +209,370 @@ function MedCard({ med, onDelete, onCheck, proximaDose, navigation }) {
   );
 }
 
-// --- COMPONENTE DO CARD DE HISTÓRICO (TOMADOS - BLINDADO) ---
+// ======================================================
+// HISTÓRICO
+// ======================================================
+
 function Tomados({ hist, med }) {
-  let dataObjeto = new Date();
+  const data = new Date(hist.data_tomada);
 
-  if (hist && hist.data_tomada) {
-    const parsed = new Date(hist.data_tomada);
-    if (!isNaN(parsed.getTime())) {
-      dataObjeto = parsed;
-    }
-  }
-
-  const hora = dataObjeto.toLocaleTimeString("pt-BR", {
+  const hora = data.toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
   });
-  const dia = dataObjeto.toLocaleDateString("pt-BR", {
+
+  const dia = data.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
   });
 
   return (
     <View style={styles.card}>
-      <View style={styles.info}>
-        <Text style={styles.medName}>{med?.nome_medicacao || "Remédio"}</Text>
-        <Text style={styles.medDesc}>
-          Tomado em: {dia} às {hora}
-        </Text>
-      </View>
+      <Text style={styles.medName}>{hist.nome_medicacao || "Medicamento"}</Text>
+
+      <Text style={styles.medDesc}>
+        Tomado em {dia} às {hora}
+      </Text>
     </View>
   );
 }
 
+// ======================================================
+// HOME
+// ======================================================
+
 export default function HomeScreen({ navigation }) {
   const [tab, setTab] = useState("ativos");
+
   const [search, setSearch] = useState("");
+
   const [meds, setMeds] = useState([]);
+
   const [hist, setHist] = useState([]);
+
   const [refreshing, setRefreshing] = useState(false);
 
-  // --- SOLICITAR PERMISSÃO DE ALARMES ---
+  const [modalVisivel, setModalVisivel] = useState(false);
+
+  const [idSendoMarcado, setIdSendoMarcado] = useState(null);
+
+  // ======================================================
+  // INIT
+  // ======================================================
+
+  useEffect(() => {
+    solicitarPermissoes();
+    carregarTudo();
+  }, []);
+
+  // ======================================================
+  // CARREGAR DADOS
+  // ======================================================
+
+  const carregarTudo = useCallback(async () => {
+    try {
+      const [historicoResponse, medsResponse] = await Promise.all([
+        api.get("historico/todos"),
+        api.get("medicamentos"),
+      ]);
+
+      const novoHistorico = [...historicoResponse.data];
+
+      const novosMeds = [...medsResponse.data];
+
+      setHist(novoHistorico);
+
+      setMeds(novosMeds);
+
+      await agendarLembretes(novosMeds, novoHistorico);
+    } catch (error) {
+      console.log(error);
+    }
+  }, []);
+
+  // ======================================================
+  // PERMISSÃO
+  // ======================================================
+
   async function solicitarPermissoes() {
     const { status } = await Notifications.requestPermissionsAsync();
+
     if (status !== "granted") {
-      Alert.alert(
-        "Aviso",
-        "Ative as notificações para não esquecer seus remédios.",
-      );
+      Alert.alert("Aviso", "Ative as notificações.");
     }
   }
 
-  // --- AGENDAMENTO DA PRÓXIMA DOSE APENAS SE JÁ TIVER SIDO TOMADO ---
-  async function agendarLembretes(listaMedicamentos) {
-    try {
-      await Notifications.cancelAllScheduledNotificationsAsync();
+  // ======================================================
+  // PEGAR ÚLTIMA TOMADA
+  // ======================================================
 
-      if (!listaMedicamentos || listaMedicamentos.length === 0) return;
+  function getUltimaTomada(idMedicacao, historicoAtual = hist) {
+    const lista = historicoAtual
+      .filter((h) => String(h.id_medicacao) === String(idMedicacao))
+      .sort((a, b) => new Date(b.data_tomada) - new Date(a.data_tomada));
 
-      for (const item of listaMedicamentos) {
-        const freqHoras = parseInt(item.frequencia) || 8;
-
-        const ultimaTomada = hist.find(
-          (h) => String(h.id_medicacao) === String(item.id_medicacao),
-        );
-
-        let dataReferencia;
-
-        if (ultimaTomada && ultimaTomada.data_tomada) {
-          const parsed = new Date(ultimaTomada.data_tomada);
-          if (!isNaN(parsed.getTime())) dataReferencia = parsed;
-        }
-
-        // SE NÃO TIVER HISTÓRICO: Combina a data pura com a hora enviada no cadastro
-        if (!dataReferencia) {
-          const dataCadastro = item.inicio_medicacao;
-          const horaCadastro = item.ultimadose || "00:00";
-
-          if (dataCadastro) {
-            const apenasData = String(dataCadastro).substring(0, 10);
-            const dataLocalStr = `${apenasData}T${horaCadastro}:00`;
-            const parsed = new Date(dataLocalStr);
-            if (!isNaN(parsed.getTime())) dataReferencia = parsed;
-          }
-        }
-
-        if (!dataReferencia) continue;
-
-        const dataProximaDose = new Date(
-          dataReferencia.getTime() + freqHoras * 60 * 60 * 1000,
-        );
-
-        const agora = new Date();
-        let gatilhoNotificacao = dataProximaDose;
-
-        if (dataProximaDose <= agora) {
-          gatilhoNotificacao = new Date(agora.getTime() + 5000);
-        }
-
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: `💊 Hora do Remédio: ${item.nome_medicacao}`,
-            body: `Está na hora de tomar o seu medicamento.`,
-            sound: true,
-            priority: "max",
-          },
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.DATE,
-            date: gatilhoNotificacao,
-          },
-        });
-      }
-    } catch (e) {
-      console.log("Erro no agendamento:", e);
-    }
+    return lista[0];
   }
 
-  const getProximaDose = (medicamento) => {
-    if (!medicamento || !medicamento.frequencia) return "---";
+  // ======================================================
+  // PRÓXIMA DOSE (RECALCULADO DE FORMA CORRETA)
+  // ======================================================
 
-    const ultimaTomada = hist.find(
-      (h) => String(h.id_medicacao) === String(medicamento.id_medicacao),
+  function getProximaDose(medicamento, historicoAtual = hist) {
+    if (!medicamento) {
+      return {
+        horario: "---",
+        status: "ok",
+      };
+    }
+
+    const ultimaTomada = getUltimaTomada(
+      medicamento.id_medicacao,
+      historicoAtual,
     );
 
-    let dataReferencia;
+    let dataReferencia = null;
 
-    // Caso 1: Já existe um histórico de tomada
-    if (ultimaTomada && ultimaTomada.data_tomada) {
+    // 1. SE JÁ FOI TOMADO AO MENOS UMA VEZ: Usa o histórico
+    if (ultimaTomada?.data_tomada) {
       const parsed = new Date(ultimaTomada.data_tomada);
       if (!isNaN(parsed.getTime())) {
         dataReferencia = parsed;
       }
     }
 
-    // Caso 2: Não tem histórico, monta usando os dados de cadastro
-    if (!dataReferencia && medicamento.inicio_medicacao) {
-      const apenasData = String(medicamento.inicio_medicacao).substring(0, 10);
-      const horaCadastro = medicamento.ultimadose || "00:00";
+    // 2. SE NUNCA FOI TOMADO: ignora data de início e assume o dia de hoje com o horário planejado
+    if (!dataReferencia) {
+      const agora = new Date();
+      const ano = agora.getFullYear();
+      const mes = String(agora.getMonth() + 1).padStart(2, "0");
+      const dia = String(agora.getDate()).padStart(2, "0");
 
-      const parsed = new Date(`${apenasData}T${horaCadastro}:00`);
+      const horaMinuto = medicamento.ultimadose || "00:00";
+
+      const parsed = new Date(`${ano}-${mes}-${dia}T${horaMinuto}:00`);
+
       if (!isNaN(parsed.getTime())) {
         dataReferencia = parsed;
       }
     }
 
-    if (!dataReferencia) return "---";
+    if (!dataReferencia) {
+      return {
+        horario: "---",
+        status: "ok",
+      };
+    }
 
-    const horasParaAdicionar = parseInt(medicamento.frequencia) || 8;
+    const frequencia = parseInt(medicamento.frequencia) || 8;
 
-    const proximaDoseData = new Date(
-      dataReferencia.getTime() + horasParaAdicionar * 60 * 60 * 1000,
+    const proximaDose = new Date(
+      dataReferencia.getTime() + frequencia * 60 * 60 * 1000,
     );
 
     const agora = new Date();
 
-    const atrasado = proximaDoseData < agora;
-    medicamento.status = atrasado ? "atrasado" : "ok";
-    const eHoje =
-      proximaDoseData.toLocaleDateString() === agora.toLocaleDateString();
+    const atrasado = proximaDose < agora;
 
-    return proximaDoseData.toLocaleTimeString("pt-BR", {
+    const horario = proximaDose.toLocaleTimeString("pt-BR", {
       hour: "2-digit",
       minute: "2-digit",
-      day: eHoje ? undefined : "2-digit",
-      month: eHoje ? undefined : "2-digit",
+      day:
+        proximaDose.toLocaleDateString() !== agora.toLocaleDateString()
+          ? "2-digit"
+          : undefined,
+      month:
+        proximaDose.toLocaleDateString() !== agora.toLocaleDateString()
+          ? "2-digit"
+          : undefined,
     });
-  };
 
-  // --- CARREGAMENTO DE DADOS ---
-  const loadMedicacoes = async () => {
+    return {
+      horario,
+      status: atrasado ? "atrasado" : "ok",
+    };
+  }
+
+  // ======================================================
+  // NOTIFICAÇÕES (AJUSTADO À NOVA LÓGICA DE CÁLCULO)
+  // ======================================================
+
+  async function agendarLembretes(listaMedicamentos, historicoAtual) {
     try {
-      const response = await api.get("medicamentos");
-      setMeds(response.data);
-      if (response.data.length > 0) agendarLembretes(response.data);
+      await Notifications.cancelAllScheduledNotificationsAsync();
+
+      for (const med of listaMedicamentos) {
+        const resultado = getProximaDose(med, historicoAtual);
+
+        if (resultado.horario === "---") {
+          continue;
+        }
+
+        const ultimaTomada = getUltimaTomada(med.id_medicacao, historicoAtual);
+        let referencia;
+
+        if (ultimaTomada?.data_tomada) {
+          referencia = new Date(ultimaTomada.data_tomada);
+        } else {
+          const agora = new Date();
+          const ano = agora.getFullYear();
+          const mes = String(agora.getMonth() + 1).padStart(2, "0");
+          const dia = String(agora.getDate()).padStart(2, "0");
+          const horaMinuto = med.ultimadose || "00:00";
+          referencia = new Date(`${ano}-${mes}-${dia}T${horaMinuto}:00`);
+        }
+
+        const trigger = new Date(
+          referencia.getTime() +
+            (parseInt(med.frequencia) || 8) * 60 * 60 * 1000,
+        );
+
+        if (trigger < new Date()) {
+          continue;
+        }
+
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `💊 ${med.nome_medicacao}`,
+            body: "Hora do medicamento.",
+            sound: true,
+          },
+
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: trigger,
+          },
+        });
+      }
     } catch (error) {
-      console.log("Erro meds:", error);
-    }
-  };
-
-  const loadHistorico = async () => {
-    try {
-      const response = await api.get("historico/todos");
-      setHist(response.data);
-    } catch (error) {
-      console.log("Erro hist:", error);
-    }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([loadMedicacoes(), loadHistorico()]);
-    setRefreshing(false);
-  };
-
-  useEffect(() => {
-    solicitarPermissoes();
-    onRefresh();
-  }, []);
-
-  // --- AÇÕES ---
-  async function marcarComoTomado(id) {
-    try {
-      const agora = new Date();
-
-      // 2. AjustE manual Da diferença de fuso horário do Brasil (UTC-3)
-      const offset = agora.getTimezoneOffset() * 60 * 1000;
-      const dataLocal = new Date(agora.getTime() - offset);
-
-      // 3. Formata para o padrão ISO "limpo" (AAAA-MM-DDTHH:MM:SS) retirando o 'Z' do final
-      const dataFormatadaBrasil = dataLocal.toISOString().slice(0, 19);
-
-      console.log("Data gerada no fuso brasileiro:", dataFormatadaBrasil);
-      const dadosCorpo = {
-        data_tomada: dataFormatadaBrasil,
-      };
-
-      const response = await api.post(`/historico/${id}`, dadosCorpo);
-
-      console.log("Resposta do servidor:", response.data);
-
-      await Promise.all([loadHistorico(), loadMedicacoes()]);
-      Alert.alert("Sucesso", "Dose registrada!");
-    } catch (error) {
-      console.log("Erro:", error.message);
-      Alert.alert("Erro", "Não foi possível registrar.");
+      console.log(error);
     }
   }
 
+  // ======================================================
+  // REFRESH
+  // ======================================================
+
+  async function onRefresh() {
+    setRefreshing(true);
+
+    await carregarTudo();
+
+    setRefreshing(false);
+  }
+
+  // ======================================================
+  // SALVAR HISTÓRICO (PRESERVANDO FUSO HORÁRIO LOCAL)
+  // ======================================================
+
+  async function executarSalvarHistorico(id, dataBase) {
+    try {
+      const ano = dataBase.getFullYear();
+      const mes = String(dataBase.getMonth() + 1).padStart(2, "0");
+      const dia = String(dataBase.getDate()).padStart(2, "0");
+      const hora = String(dataBase.getHours()).padStart(2, "0");
+      const minuto = String(dataBase.getMinutes()).padStart(2, "0");
+      const segundo = String(dataBase.getSeconds()).padStart(2, "0");
+
+      const dataFormatada = `${ano}-${mes}-${dia}T${hora}:${minuto}:${segundo}`;
+
+      await api.post(`/historico/${id}`, {
+        data_tomada: dataFormatada,
+      });
+
+      await carregarTudo();
+
+      Alert.alert("Sucesso", "Dose registrada.");
+    } catch (error) {
+      console.log(error);
+
+      Alert.alert("Erro", "Falha ao registrar.");
+    }
+  }
+
+  // ======================================================
+  // MARCAR TOMADO
+  // ======================================================
+
+  async function marcarComoTomado(id) {
+    const med = meds.find((m) => m.id_medicacao === id);
+
+    const resultado = getProximaDose(med);
+
+    if (resultado.status === "atrasado") {
+      setIdSendoMarcado(id);
+
+      setModalVisivel(true);
+
+      return;
+    }
+
+    await executarSalvarHistorico(id, new Date());
+  }
+
+  // ======================================================
+  // DELETE
+  // ======================================================
+
   async function deletarMedicacao(id) {
     Alert.alert("Excluir", "Deseja excluir?", [
-      { text: "Não" },
+      {
+        text: "Não",
+      },
+
       {
         text: "Sim",
+
         onPress: async () => {
-          await api.delete(`/medicamentosApagar/${id}`);
-          loadMedicacoes();
+          try {
+            await api.delete(`/medicamentosApagar/${id}`);
+
+            await carregarTudo();
+          } catch (error) {
+            console.log(error);
+          }
         },
       },
     ]);
   }
 
-  const filteredMeds = meds.filter((m) =>
+  // ======================================================
+  // FILTRO
+  // ======================================================
+
+  const filteredMeds = [...meds].filter((m) =>
     m.nome_medicacao?.toLowerCase().includes(search.toLowerCase()),
   );
+
+  // ======================================================
+  // RENDER
+  // ======================================================
 
   return (
     <View style={styles.container}>
       <Header />
 
+      <ModalHoraAtrasada
+        visible={modalVisivel}
+        onConfirm={async (dataDigitada) => {
+          setModalVisivel(false);
+
+          if (idSendoMarcado) {
+            await executarSalvarHistorico(idSendoMarcado, dataDigitada);
+          }
+
+          setIdSendoMarcado(null);
+        }}
+        onCancel={() => {
+          setModalVisivel(false);
+
+          setIdSendoMarcado(null);
+        }}
+      />
+
       <View style={styles.searchBox}>
         <Ionicons name="search" size={16} color={colors.textMuted} />
+
         <TextInput
           style={styles.searchInput}
           placeholder="Pesquisar..."
@@ -359,6 +592,7 @@ export default function HomeScreen({ navigation }) {
             ATIVOS
           </Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.tab, tab === "tomados" && styles.tabActive]}
           onPress={() => setTab("tomados")}
@@ -373,32 +607,118 @@ export default function HomeScreen({ navigation }) {
 
       <ScreenWrapper refreshing={refreshing} onRefreshAction={onRefresh}>
         {tab === "ativos"
-          ? filteredMeds.map((item) => (
-              <MedCard
-                key={item.id_medicacao}
-                med={item}
-                onDelete={deletarMedicacao}
-                onCheck={marcarComoTomado}
-                proximaDose={getProximaDose(item)} // Executado por item na renderização com segurança
-                navigation={navigation}
-              />
-            ))
-          : hist.map((item) => {
-              const dadosMed = meds.find(
-                (m) => String(m.id_medicacao) === String(item.id_medicacao),
-              );
+          ? filteredMeds.map((item) => {
+              const resultado = getProximaDose(item);
+
               return (
-                <Tomados
-                  key={item.id_historico}
-                  hist={item}
-                  med={dadosMed || { nome_medicacao: "Removido" }}
+                <MedCard
+                  key={`${item.id_medicacao}-${hist.length}`}
+                  med={item}
+                  resultado={resultado}
+                  onDelete={deletarMedicacao}
+                  onCheck={marcarComoTomado}
+                  navigation={navigation}
                 />
               );
+            })
+          : hist.map((item) => {
+              const med = meds.find(
+                (m) => String(m.id_medicacao) === String(item.id_medicacao),
+              );
+
+              return <Tomados key={item.id_historico} hist={item} med={med} />;
             })}
       </ScreenWrapper>
     </View>
   );
 }
+
+// ======================================================
+// MODAL STYLES
+// ======================================================
+
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+
+  box: {
+    width: "100%",
+    maxWidth: 320,
+    backgroundColor: "#fff",
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+  },
+
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+
+  titulo: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+
+  descricao: {
+    marginBottom: spacing.md,
+  },
+
+  input: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: radius.sm,
+    height: 44,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    textAlign: "center",
+  },
+
+  inputErro: {
+    borderColor: colors.error,
+  },
+
+  erro: {
+    color: colors.error,
+    textAlign: "center",
+    marginBottom: spacing.md,
+  },
+
+  botoes: {
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+
+  btnCancelar: {
+    flex: 1,
+    height: 40,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: radius.sm,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  btnConfirmar: {
+    flex: 1,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: colors.secondary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+});
+
+// ======================================================
+// STYLES
+// ======================================================
 
 const styles = StyleSheet.create({
   container: {
@@ -406,6 +726,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: spacing.sm,
   },
+
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -418,7 +739,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
     elevation: 2,
   },
-  searchInput: { flex: 1, fontSize: 14, color: colors.text },
+
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.text,
+  },
+
   tabs: {
     flexDirection: "row",
     backgroundColor: colors.cardBlue,
@@ -426,6 +753,7 @@ const styles = StyleSheet.create({
     padding: 4,
     marginBottom: spacing.md,
   },
+
   tab: {
     flex: 1,
     height: 36,
@@ -433,17 +761,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: radius.full,
   },
-  tabActive: { backgroundColor: colors.secondary },
-  tabText: { fontSize: 13, fontWeight: "700", color: colors.textLight },
-  tabTextActive: { color: "#fff" },
+
+  tabActive: {
+    backgroundColor: colors.secondary,
+  },
+
+  tabText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.textLight,
+  },
+
+  tabTextActive: {
+    color: "#fff",
+  },
+
   card: {
     backgroundColor: colors.cardBlue,
     borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
   },
-  cardHL: { borderLeftWidth: 4, borderLeftColor: colors.secondary },
-  cardRow: { flexDirection: "row", gap: spacing.sm },
+
+  cardHL: {
+    borderLeftWidth: 4,
+    borderLeftColor: colors.secondary,
+  },
+
+  cardRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+
   img: {
     width: 46,
     height: 46,
@@ -452,14 +801,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  info: { flex: 1 },
+
+  info: {
+    flex: 1,
+  },
+
   medName: {
     fontSize: 15,
     fontWeight: "700",
     color: colors.primary,
     fontStyle: "italic",
   },
-  medDesc: { fontSize: 16, color: colors.text, marginTop: 2 },
+
+  medDesc: {
+    fontSize: 16,
+    color: colors.text,
+    marginTop: 2,
+  },
+
   badge: {
     backgroundColor: colors.error,
     borderRadius: radius.sm,
@@ -468,13 +827,20 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginTop: 5,
   },
-  badgeText: { color: "#fff", fontSize: 11, fontWeight: "600" },
+
+  badgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "600",
+  },
+
   actions: {
     flexDirection: "row",
     gap: spacing.lg,
     marginTop: spacing.md,
     justifyContent: "flex-end",
   },
+
   btnGreen: {
     width: 100,
     height: 40,
@@ -483,6 +849,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+
   btnRed: {
     width: 100,
     height: 40,

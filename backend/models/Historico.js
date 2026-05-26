@@ -1,29 +1,41 @@
 const sequelize = require("../config/database");
 const { DataTypes } = require("sequelize");
 
-const HistoricoMed = sequelize.define("historico_med", {
-  id_historico: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-  },
+const HistoricoMed = sequelize.define(
+  "HistoricoMed",
+  {
+    id_historico: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
 
-  id_medicacao: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
+    id_medicacao: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+
+    nome_medicacao: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+
+    data_tomada: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+
+    observacao: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
-  // Data e hora da toma da medicação
-  data_tomada: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW,
+  {
+    tableName: "historico_meds",
+    timestamps: false,
   },
-  // Para futuras observações (opcional)
-  observacao: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-});
+);
 
 HistoricoMed.associate = (models) => {
   // O histórico pertence a uma medicação
