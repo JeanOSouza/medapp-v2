@@ -256,23 +256,15 @@ export default function HomeScreen({ navigation }) {
 
   const [idSendoMarcado, setIdSendoMarcado] = useState(null);
 
-  // ======================================================
-  // INIT
-  // ======================================================
-
   useEffect(() => {
     solicitarPermissoes();
     carregarTudo();
   }, []);
 
-  // ======================================================
-  // CARREGAR DADOS
-  // ======================================================
-
   const carregarTudo = useCallback(async () => {
     try {
       const [historicoResponse, medsResponse] = await Promise.all([
-        api.get("historico/porsuario"),
+        api.get("historico/porusuario"),
         api.get("medicamentos"),
       ]);
 
@@ -302,10 +294,6 @@ export default function HomeScreen({ navigation }) {
     }
   }
 
-  // ======================================================
-  // PEGAR ÚLTIMA TOMADA
-  // ======================================================
-
   function getUltimaTomada(idMedicacao, historicoAtual = hist) {
     const lista = historicoAtual
       .filter((h) => String(h.id_medicacao) === String(idMedicacao))
@@ -313,10 +301,6 @@ export default function HomeScreen({ navigation }) {
 
     return lista[0];
   }
-
-  // ======================================================
-  // PRÓXIMA DOSE (RECALCULADO DE FORMA CORRETA)
-  // ======================================================
 
   function getProximaDose(medicamento, historicoAtual = hist) {
     if (!medicamento) {
@@ -489,10 +473,6 @@ export default function HomeScreen({ navigation }) {
       Alert.alert("Erro", "Falha ao registrar.");
     }
   }
-
-  // ======================================================
-  // MARCAR TOMADO
-  // ======================================================
 
   async function marcarComoTomado(id) {
     const med = meds.find((m) => m.id_medicacao === id);
