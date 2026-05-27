@@ -272,7 +272,7 @@ export default function HomeScreen({ navigation }) {
   const carregarTudo = useCallback(async () => {
     try {
       const [historicoResponse, medsResponse] = await Promise.all([
-        api.get("historico/todos"),
+        api.get("historico/porsuario"),
         api.get("medicamentos"),
       ]);
 
