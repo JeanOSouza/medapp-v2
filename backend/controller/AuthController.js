@@ -6,7 +6,6 @@ module.exports = {
   // ✅ REGISTRO
   async registrar(req, res) {
     try {
-      console.log("--> DADOS CHEGANDO NO BACKEND:", req.body); // ADICIONE ESTA LINHA
       const {
         nome,
         email,
@@ -52,8 +51,6 @@ module.exports = {
         estado,
       });
 
-      console.log(">>> NOVO USUÁRIO CADASTRADO:", emailLimpo);
-
       return res.status(201).json({
         message: "Usuário criado com sucesso!",
         id: user.id_usuario,
@@ -64,7 +61,6 @@ module.exports = {
     }
   },
 
-  // ✅ LOGIN
   async login(req, res) {
     try {
       const { email, senha, devideid } = req.body;
@@ -84,20 +80,16 @@ module.exports = {
 
       let senhaValida = false;
 
-      // 🔥 SUPORTE PARA SENHAS ANTIGAS (sem hash)
       if (user.senha.startsWith("$2")) {
         senhaValida = await bcrypt.compare(senha.trim(), user.senha);
       } else {
         senhaValida = senha.trim() === user.senha;
       }
 
-      console.log("--- DEBUG LOGIN ---");
-      console.log("Email:", emailBusca);
-      console.log("Senha válida?:", senhaValida);
-
       if (!senhaValida) {
         return res.status(401).json({ message: "Credenciais inválidas" });
       }
+      console.log(`Usuario logado ${email}`);
 
       // 🔐 TOKEN JWT
       const token = jwt.sign(

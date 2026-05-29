@@ -50,10 +50,6 @@ module.exports = {
       const { id_medicacao } = req.params;
       const { data_tomada } = req.body;
       const userId = req.userId;
-      console.log("=== DEBUG REGISTRO DOSE ===");
-      console.log("req.userId que veio do middleware:", req.userId);
-      console.log("===========================");
-
       // Busca o medicamento para garantir que ele existe e pegar o nome correto
       const remedio = await Medicacao.findOne({
         where: {
@@ -78,6 +74,29 @@ module.exports = {
       return res.status(201).json(dose);
     } catch (error) {
       console.error(error);
+      return res.status(500).json({
+        error: error.message,
+      });
+    }
+  },
+  async cadaMedicacao(req, res) {
+    try {
+      const userId = req.userId;
+      const { id_medicacao } = req.params;
+
+      const doses = await Historico.findAll({
+        where: {
+          id_usuario: userId,
+          id_medicacao: Number(id_medicacao),
+        },
+
+        order: [["data_tomada", "DESC"]],
+      });
+
+      return res.json(doses);
+    } catch (error) {
+      console.error(error);
+
       return res.status(500).json({
         error: error.message,
       });

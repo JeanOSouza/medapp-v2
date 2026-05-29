@@ -30,7 +30,6 @@ const dataInicio = (inicio_medicacao) => {
   }
 };
 
-// Trata o formato de data vindo do banco (ISO ou string formatada)
 const formatarDataTomada = (dataString) => {
   if (!dataString) return "---";
 
