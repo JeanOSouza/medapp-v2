@@ -49,7 +49,10 @@ module.exports = {
     try {
       const { id_medicacao } = req.params;
       const { data_tomada } = req.body;
-      const userId = req.userId; // 1. Pega o ID do usuário logado na requisição
+      const userId = req.userId;
+      console.log("=== DEBUG REGISTRO DOSE ===");
+      console.log("req.userId que veio do middleware:", req.userId);
+      console.log("===========================");
 
       // Busca o medicamento para garantir que ele existe e pegar o nome correto
       const remedio = await Medicacao.findOne({
