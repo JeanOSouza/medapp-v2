@@ -45,13 +45,13 @@ module.exports = {
       });
     }
   },
-
   async registroDose(req, res) {
     try {
       const { id_medicacao } = req.params;
-
       const { data_tomada } = req.body;
+      const userId = req.userId; // 1. Pega o ID do usuário logado na requisição
 
+      // Busca o medicamento para garantir que ele existe e pegar o nome correto
       const remedio = await Medicacao.findOne({
         where: {
           id_medicacao: Number(id_medicacao),
@@ -64,20 +64,17 @@ module.exports = {
         });
       }
 
+      // 2. Cria o histórico usando o userId da requisição e limpando o nome do remédio
       const dose = await Historico.create({
         id_medicacao: Number(id_medicacao),
-
-        id_usuario: remedio.id_usuario,
-
-        nome_medicacao: remedio.nome_medicacao,
-
+        id_usuario: userId, // <-- Mudança aqui: garante que nunca será null
+        nome_medicacao: remedio.nome_medicacao.trim(), // Remove espaços extras como 'Amoxilina '
         data_tomada: data_tomada || new Date(),
       });
 
       return res.status(201).json(dose);
     } catch (error) {
       console.error(error);
-
       return res.status(500).json({
         error: error.message,
       });
