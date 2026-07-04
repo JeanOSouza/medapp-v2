@@ -79,27 +79,23 @@ module.exports = {
       });
     }
   },
-  async cadaMedicacao(req, res) {
-    try {
-      const userId = req.userId;
-      const { id_medicacao } = req.params;
+ async cadaMedicacao(req, res) {
+  try {
+    const userId = req.userId;
+    const idMedicacaoParam = req.params.id || req.params.id_medicacao;
 
-      const doses = await Historico.findAll({
-        where: {
-          id_usuario: userId,
-          id_medicacao: Number(id_medicacao),
-        },
+    const doses = await Historico.findAll({
+      where: {
+        id_usuario: userId,
+        id_medicacao: Number(idMedicacaoParam),
+      },
+      order: [["data_tomada", "DESC"]],
+    });
 
-        order: [["data_tomada", "DESC"]],
-      });
-
-      return res.json(doses);
-    } catch (error) {
-      console.error(error);
-
-      return res.status(500).json({
-        error: error.message,
-      });
-    }
-  },
+    return res.json(doses);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.message });
+  }
+},
 };
