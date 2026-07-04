@@ -9,7 +9,7 @@ console.log("DENTRO DAS ROTAS:", historicoController);
 
 // Buscar histórico de um medicamento específico
 router.get("/historico/porusuario", auth, historicoController.list);
-router.get("historico/pormedicacao", auth, historicoController.cadaMedicacao);
+router.get("/historico/pormedicacao", auth, historicoController.cadaMedicacao);
 
 // Buscar TODOS os históricos do usuário (Ajustado para usar o controller)
 router.get("/historico/todosusuarios", auth, historicoController.listAll);
